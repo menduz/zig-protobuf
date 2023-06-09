@@ -21,7 +21,6 @@ pub const Version = struct {
         .suffix = fd(4, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: Version, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -44,7 +43,6 @@ pub const CodeGeneratorRequest = struct {
         .compiler_version = fd(3, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: CodeGeneratorRequest, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -60,12 +58,11 @@ pub const CodeGeneratorRequest = struct {
 };
 
 pub const CodeGeneratorResponse = struct {
-pub const Feature = enum(i32) {
-   FEATURE_NONE = 0,
-   FEATURE_PROTO3_OPTIONAL = 1,
-    _,
-};
-
+    pub const Feature = enum(i32) {
+        FEATURE_NONE = 0,
+        FEATURE_PROTO3_OPTIONAL = 1,
+        _,
+    };
 
     pub const _desc_table = .{
         .@"error" = fd(1, .{ .List = .String }, []const u8),
@@ -73,29 +70,27 @@ pub const Feature = enum(i32) {
         .file = fd(15, .{ .List = .String }, []const u8),
     };
 
-pub const File = struct {
-    pub const _desc_table = .{
-        .name = fd(1, .{ .List = .String }, []const u8),
-        .insertion_point = fd(2, .{ .List = .String }, []const u8),
-        .content = fd(15, .{ .List = .String }, []const u8),
-        .generated_code_info = fd(16, .{ .List = .String }, []const u8),
+    pub const File = struct {
+        pub const _desc_table = .{
+            .name = fd(1, .{ .List = .String }, []const u8),
+            .insertion_point = fd(2, .{ .List = .String }, []const u8),
+            .content = fd(15, .{ .List = .String }, []const u8),
+            .generated_code_info = fd(16, .{ .List = .String }, []const u8),
+        };
+
+        pub fn encode(self: File, allocator: Allocator) ![]u8 {
+            return pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) !File {
+            return pb_decode(File, input, allocator);
+        }
+        pub fn init(allocator: Allocator) File {
+            return pb_init(File, allocator);
+        }
+        pub fn deinit(self: File) void {
+            return pb_deinit(self);
+        }
     };
-
-
-    pub fn encode(self: File, allocator: Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
-    pub fn decode(input: []const u8, allocator: Allocator) !File {
-        return pb_decode(File, input, allocator);
-    }
-    pub fn init(allocator: Allocator) File {
-        return pb_init(File, allocator);
-    }
-    pub fn deinit(self: File) void {
-        return pb_deinit(self);
-    }
-};
-
 
     pub fn encode(self: CodeGeneratorResponse, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);

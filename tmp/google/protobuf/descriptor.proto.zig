@@ -18,7 +18,6 @@ pub const FileDescriptorSet = struct {
         .file = fd(1, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: FileDescriptorSet, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -50,7 +49,6 @@ pub const FileDescriptorProto = struct {
         .edition = fd(13, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: FileDescriptorProto, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -79,49 +77,46 @@ pub const DescriptorProto = struct {
         .reserved_name = fd(10, .{ .List = .String }, []const u8),
     };
 
-pub const ExtensionRange = struct {
-    pub const _desc_table = .{
-        .start = fd(1, .{ .List = .String }, []const u8),
-        .end = fd(2, .{ .List = .String }, []const u8),
-        .options = fd(3, .{ .List = .String }, []const u8),
+    pub const ExtensionRange = struct {
+        pub const _desc_table = .{
+            .start = fd(1, .{ .List = .String }, []const u8),
+            .end = fd(2, .{ .List = .String }, []const u8),
+            .options = fd(3, .{ .List = .String }, []const u8),
+        };
+
+        pub fn encode(self: ExtensionRange, allocator: Allocator) ![]u8 {
+            return pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) !ExtensionRange {
+            return pb_decode(ExtensionRange, input, allocator);
+        }
+        pub fn init(allocator: Allocator) ExtensionRange {
+            return pb_init(ExtensionRange, allocator);
+        }
+        pub fn deinit(self: ExtensionRange) void {
+            return pb_deinit(self);
+        }
     };
 
+    pub const ReservedRange = struct {
+        pub const _desc_table = .{
+            .start = fd(1, .{ .List = .String }, []const u8),
+            .end = fd(2, .{ .List = .String }, []const u8),
+        };
 
-    pub fn encode(self: ExtensionRange, allocator: Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
-    pub fn decode(input: []const u8, allocator: Allocator) !ExtensionRange {
-        return pb_decode(ExtensionRange, input, allocator);
-    }
-    pub fn init(allocator: Allocator) ExtensionRange {
-        return pb_init(ExtensionRange, allocator);
-    }
-    pub fn deinit(self: ExtensionRange) void {
-        return pb_deinit(self);
-    }
-};
-
-pub const ReservedRange = struct {
-    pub const _desc_table = .{
-        .start = fd(1, .{ .List = .String }, []const u8),
-        .end = fd(2, .{ .List = .String }, []const u8),
+        pub fn encode(self: ReservedRange, allocator: Allocator) ![]u8 {
+            return pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) !ReservedRange {
+            return pb_decode(ReservedRange, input, allocator);
+        }
+        pub fn init(allocator: Allocator) ReservedRange {
+            return pb_init(ReservedRange, allocator);
+        }
+        pub fn deinit(self: ReservedRange) void {
+            return pb_deinit(self);
+        }
     };
-
-
-    pub fn encode(self: ReservedRange, allocator: Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
-    pub fn decode(input: []const u8, allocator: Allocator) !ReservedRange {
-        return pb_decode(ReservedRange, input, allocator);
-    }
-    pub fn init(allocator: Allocator) ReservedRange {
-        return pb_init(ReservedRange, allocator);
-    }
-    pub fn deinit(self: ReservedRange) void {
-        return pb_deinit(self);
-    }
-};
-
 
     pub fn encode(self: DescriptorProto, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -138,12 +133,11 @@ pub const ReservedRange = struct {
 };
 
 pub const ExtensionRangeOptions = struct {
-pub const VerificationState = enum(i32) {
-   DECLARATION = 0,
-   UNVERIFIED = 1,
-    _,
-};
-
+    pub const VerificationState = enum(i32) {
+        DECLARATION = 0,
+        UNVERIFIED = 1,
+        _,
+    };
 
     pub const _desc_table = .{
         .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
@@ -151,31 +145,29 @@ pub const VerificationState = enum(i32) {
         .verification = fd(3, .{ .List = .String }, []const u8),
     };
 
-pub const Declaration = struct {
-    pub const _desc_table = .{
-        .number = fd(1, .{ .List = .String }, []const u8),
-        .full_name = fd(2, .{ .List = .String }, []const u8),
-        .@"type" = fd(3, .{ .List = .String }, []const u8),
-        .is_repeated = fd(4, .{ .List = .String }, []const u8),
-        .reserved = fd(5, .{ .List = .String }, []const u8),
-        .repeated = fd(6, .{ .List = .String }, []const u8),
+    pub const Declaration = struct {
+        pub const _desc_table = .{
+            .number = fd(1, .{ .List = .String }, []const u8),
+            .full_name = fd(2, .{ .List = .String }, []const u8),
+            .type = fd(3, .{ .List = .String }, []const u8),
+            .is_repeated = fd(4, .{ .List = .String }, []const u8),
+            .reserved = fd(5, .{ .List = .String }, []const u8),
+            .repeated = fd(6, .{ .List = .String }, []const u8),
+        };
+
+        pub fn encode(self: Declaration, allocator: Allocator) ![]u8 {
+            return pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) !Declaration {
+            return pb_decode(Declaration, input, allocator);
+        }
+        pub fn init(allocator: Allocator) Declaration {
+            return pb_init(Declaration, allocator);
+        }
+        pub fn deinit(self: Declaration) void {
+            return pb_deinit(self);
+        }
     };
-
-
-    pub fn encode(self: Declaration, allocator: Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
-    pub fn decode(input: []const u8, allocator: Allocator) !Declaration {
-        return pb_decode(Declaration, input, allocator);
-    }
-    pub fn init(allocator: Allocator) Declaration {
-        return pb_init(Declaration, allocator);
-    }
-    pub fn deinit(self: Declaration) void {
-        return pb_deinit(self);
-    }
-};
-
 
     pub fn encode(self: ExtensionRangeOptions, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -192,42 +184,40 @@ pub const Declaration = struct {
 };
 
 pub const FieldDescriptorProto = struct {
-pub const Type = enum(i32) {
-   TYPE_DOUBLE = 1,
-   TYPE_FLOAT = 2,
-   TYPE_INT64 = 3,
-   TYPE_UINT64 = 4,
-   TYPE_INT32 = 5,
-   TYPE_FIXED64 = 6,
-   TYPE_FIXED32 = 7,
-   TYPE_BOOL = 8,
-   TYPE_STRING = 9,
-   TYPE_GROUP = 10,
-   TYPE_MESSAGE = 11,
-   TYPE_BYTES = 12,
-   TYPE_UINT32 = 13,
-   TYPE_ENUM = 14,
-   TYPE_SFIXED32 = 15,
-   TYPE_SFIXED64 = 16,
-   TYPE_SINT32 = 17,
-   TYPE_SINT64 = 18,
-    _,
-};
+    pub const Type = enum(i32) {
+        TYPE_DOUBLE = 1,
+        TYPE_FLOAT = 2,
+        TYPE_INT64 = 3,
+        TYPE_UINT64 = 4,
+        TYPE_INT32 = 5,
+        TYPE_FIXED64 = 6,
+        TYPE_FIXED32 = 7,
+        TYPE_BOOL = 8,
+        TYPE_STRING = 9,
+        TYPE_GROUP = 10,
+        TYPE_MESSAGE = 11,
+        TYPE_BYTES = 12,
+        TYPE_UINT32 = 13,
+        TYPE_ENUM = 14,
+        TYPE_SFIXED32 = 15,
+        TYPE_SFIXED64 = 16,
+        TYPE_SINT32 = 17,
+        TYPE_SINT64 = 18,
+        _,
+    };
 
-
-pub const Label = enum(i32) {
-   LABEL_OPTIONAL = 1,
-   LABEL_REQUIRED = 2,
-   LABEL_REPEATED = 3,
-    _,
-};
-
+    pub const Label = enum(i32) {
+        LABEL_OPTIONAL = 1,
+        LABEL_REQUIRED = 2,
+        LABEL_REPEATED = 3,
+        _,
+    };
 
     pub const _desc_table = .{
         .name = fd(1, .{ .List = .String }, []const u8),
         .number = fd(3, .{ .List = .String }, []const u8),
         .label = fd(4, .{ .List = .String }, []const u8),
-        .@"type" = fd(5, .{ .List = .String }, []const u8),
+        .type = fd(5, .{ .List = .String }, []const u8),
         .type_name = fd(6, .{ .List = .String }, []const u8),
         .extendee = fd(2, .{ .List = .String }, []const u8),
         .default_value = fd(7, .{ .List = .String }, []const u8),
@@ -236,7 +226,6 @@ pub const Label = enum(i32) {
         .options = fd(8, .{ .List = .String }, []const u8),
         .proto3_optional = fd(17, .{ .List = .String }, []const u8),
     };
-
 
     pub fn encode(self: FieldDescriptorProto, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -257,7 +246,6 @@ pub const OneofDescriptorProto = struct {
         .name = fd(1, .{ .List = .String }, []const u8),
         .options = fd(2, .{ .List = .String }, []const u8),
     };
-
 
     pub fn encode(self: OneofDescriptorProto, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -282,27 +270,25 @@ pub const EnumDescriptorProto = struct {
         .reserved_name = fd(5, .{ .List = .String }, []const u8),
     };
 
-pub const EnumReservedRange = struct {
-    pub const _desc_table = .{
-        .start = fd(1, .{ .List = .String }, []const u8),
-        .end = fd(2, .{ .List = .String }, []const u8),
+    pub const EnumReservedRange = struct {
+        pub const _desc_table = .{
+            .start = fd(1, .{ .List = .String }, []const u8),
+            .end = fd(2, .{ .List = .String }, []const u8),
+        };
+
+        pub fn encode(self: EnumReservedRange, allocator: Allocator) ![]u8 {
+            return pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) !EnumReservedRange {
+            return pb_decode(EnumReservedRange, input, allocator);
+        }
+        pub fn init(allocator: Allocator) EnumReservedRange {
+            return pb_init(EnumReservedRange, allocator);
+        }
+        pub fn deinit(self: EnumReservedRange) void {
+            return pb_deinit(self);
+        }
     };
-
-
-    pub fn encode(self: EnumReservedRange, allocator: Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
-    pub fn decode(input: []const u8, allocator: Allocator) !EnumReservedRange {
-        return pb_decode(EnumReservedRange, input, allocator);
-    }
-    pub fn init(allocator: Allocator) EnumReservedRange {
-        return pb_init(EnumReservedRange, allocator);
-    }
-    pub fn deinit(self: EnumReservedRange) void {
-        return pb_deinit(self);
-    }
-};
-
 
     pub fn encode(self: EnumDescriptorProto, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -325,7 +311,6 @@ pub const EnumValueDescriptorProto = struct {
         .options = fd(3, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: EnumValueDescriptorProto, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -346,7 +331,6 @@ pub const ServiceDescriptorProto = struct {
         .method = fd(2, .{ .List = .String }, []const u8),
         .options = fd(3, .{ .List = .String }, []const u8),
     };
-
 
     pub fn encode(self: ServiceDescriptorProto, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -372,7 +356,6 @@ pub const MethodDescriptorProto = struct {
         .server_streaming = fd(6, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: MethodDescriptorProto, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -388,13 +371,12 @@ pub const MethodDescriptorProto = struct {
 };
 
 pub const FileOptions = struct {
-pub const OptimizeMode = enum(i32) {
-   SPEED = 1,
-   CODE_SIZE = 2,
-   LITE_RUNTIME = 3,
-    _,
-};
-
+    pub const OptimizeMode = enum(i32) {
+        SPEED = 1,
+        CODE_SIZE = 2,
+        LITE_RUNTIME = 3,
+        _,
+    };
 
     pub const _desc_table = .{
         .java_package = fd(1, .{ .List = .String }, []const u8),
@@ -420,7 +402,6 @@ pub const OptimizeMode = enum(i32) {
         .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: FileOptions, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -445,7 +426,6 @@ pub const MessageOptions = struct {
         .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: MessageOptions, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -461,44 +441,40 @@ pub const MessageOptions = struct {
 };
 
 pub const FieldOptions = struct {
-pub const CType = enum(i32) {
-   STRING = 0,
-   CORD = 1,
-   STRING_PIECE = 2,
-    _,
-};
+    pub const CType = enum(i32) {
+        STRING = 0,
+        CORD = 1,
+        STRING_PIECE = 2,
+        _,
+    };
 
+    pub const JSType = enum(i32) {
+        JS_NORMAL = 0,
+        JS_STRING = 1,
+        JS_NUMBER = 2,
+        _,
+    };
 
-pub const JSType = enum(i32) {
-   JS_NORMAL = 0,
-   JS_STRING = 1,
-   JS_NUMBER = 2,
-    _,
-};
+    pub const OptionRetention = enum(i32) {
+        RETENTION_UNKNOWN = 0,
+        RETENTION_RUNTIME = 1,
+        RETENTION_SOURCE = 2,
+        _,
+    };
 
-
-pub const OptionRetention = enum(i32) {
-   RETENTION_UNKNOWN = 0,
-   RETENTION_RUNTIME = 1,
-   RETENTION_SOURCE = 2,
-    _,
-};
-
-
-pub const OptionTargetType = enum(i32) {
-   TARGET_TYPE_UNKNOWN = 0,
-   TARGET_TYPE_FILE = 1,
-   TARGET_TYPE_EXTENSION_RANGE = 2,
-   TARGET_TYPE_MESSAGE = 3,
-   TARGET_TYPE_FIELD = 4,
-   TARGET_TYPE_ONEOF = 5,
-   TARGET_TYPE_ENUM = 6,
-   TARGET_TYPE_ENUM_ENTRY = 7,
-   TARGET_TYPE_SERVICE = 8,
-   TARGET_TYPE_METHOD = 9,
-    _,
-};
-
+    pub const OptionTargetType = enum(i32) {
+        TARGET_TYPE_UNKNOWN = 0,
+        TARGET_TYPE_FILE = 1,
+        TARGET_TYPE_EXTENSION_RANGE = 2,
+        TARGET_TYPE_MESSAGE = 3,
+        TARGET_TYPE_FIELD = 4,
+        TARGET_TYPE_ONEOF = 5,
+        TARGET_TYPE_ENUM = 6,
+        TARGET_TYPE_ENUM_ENTRY = 7,
+        TARGET_TYPE_SERVICE = 8,
+        TARGET_TYPE_METHOD = 9,
+        _,
+    };
 
     pub const _desc_table = .{
         .ctype = fd(1, .{ .List = .String }, []const u8),
@@ -514,7 +490,6 @@ pub const OptionTargetType = enum(i32) {
         .targets = fd(19, .{ .List = .String }, []const u8),
         .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
     };
-
 
     pub fn encode(self: FieldOptions, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -534,7 +509,6 @@ pub const OneofOptions = struct {
     pub const _desc_table = .{
         .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
     };
-
 
     pub fn encode(self: OneofOptions, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -558,7 +532,6 @@ pub const EnumOptions = struct {
         .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: EnumOptions, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -578,7 +551,6 @@ pub const EnumValueOptions = struct {
         .deprecated = fd(1, .{ .List = .String }, []const u8),
         .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
     };
-
 
     pub fn encode(self: EnumValueOptions, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -600,7 +572,6 @@ pub const ServiceOptions = struct {
         .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
     };
 
-
     pub fn encode(self: ServiceOptions, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
     }
@@ -616,20 +587,18 @@ pub const ServiceOptions = struct {
 };
 
 pub const MethodOptions = struct {
-pub const IdempotencyLevel = enum(i32) {
-   IDEMPOTENCY_UNKNOWN = 0,
-   NO_SIDE_EFFECTS = 1,
-   IDEMPOTENT = 2,
-    _,
-};
-
+    pub const IdempotencyLevel = enum(i32) {
+        IDEMPOTENCY_UNKNOWN = 0,
+        NO_SIDE_EFFECTS = 1,
+        IDEMPOTENT = 2,
+        _,
+    };
 
     pub const _desc_table = .{
         .deprecated = fd(33, .{ .List = .String }, []const u8),
         .idempotency_level = fd(34, .{ .List = .String }, []const u8),
         .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
     };
-
 
     pub fn encode(self: MethodOptions, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -656,27 +625,25 @@ pub const UninterpretedOption = struct {
         .aggregate_value = fd(8, .{ .List = .String }, []const u8),
     };
 
-pub const NamePart = struct {
-    pub const _desc_table = .{
-        .name_part = fd(1, .{ .List = .String }, []const u8),
-        .is_extension = fd(2, .{ .List = .String }, []const u8),
+    pub const NamePart = struct {
+        pub const _desc_table = .{
+            .name_part = fd(1, .{ .List = .String }, []const u8),
+            .is_extension = fd(2, .{ .List = .String }, []const u8),
+        };
+
+        pub fn encode(self: NamePart, allocator: Allocator) ![]u8 {
+            return pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) !NamePart {
+            return pb_decode(NamePart, input, allocator);
+        }
+        pub fn init(allocator: Allocator) NamePart {
+            return pb_init(NamePart, allocator);
+        }
+        pub fn deinit(self: NamePart) void {
+            return pb_deinit(self);
+        }
     };
-
-
-    pub fn encode(self: NamePart, allocator: Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
-    pub fn decode(input: []const u8, allocator: Allocator) !NamePart {
-        return pb_decode(NamePart, input, allocator);
-    }
-    pub fn init(allocator: Allocator) NamePart {
-        return pb_init(NamePart, allocator);
-    }
-    pub fn deinit(self: NamePart) void {
-        return pb_deinit(self);
-    }
-};
-
 
     pub fn encode(self: UninterpretedOption, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -697,30 +664,28 @@ pub const SourceCodeInfo = struct {
         .location = fd(1, .{ .List = .String }, []const u8),
     };
 
-pub const Location = struct {
-    pub const _desc_table = .{
-        .path = fd(1, .{ .List = .String }, []const u8),
-        .span = fd(2, .{ .List = .String }, []const u8),
-        .leading_comments = fd(3, .{ .List = .String }, []const u8),
-        .trailing_comments = fd(4, .{ .List = .String }, []const u8),
-        .leading_detached_comments = fd(6, .{ .List = .String }, []const u8),
+    pub const Location = struct {
+        pub const _desc_table = .{
+            .path = fd(1, .{ .List = .String }, []const u8),
+            .span = fd(2, .{ .List = .String }, []const u8),
+            .leading_comments = fd(3, .{ .List = .String }, []const u8),
+            .trailing_comments = fd(4, .{ .List = .String }, []const u8),
+            .leading_detached_comments = fd(6, .{ .List = .String }, []const u8),
+        };
+
+        pub fn encode(self: Location, allocator: Allocator) ![]u8 {
+            return pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) !Location {
+            return pb_decode(Location, input, allocator);
+        }
+        pub fn init(allocator: Allocator) Location {
+            return pb_init(Location, allocator);
+        }
+        pub fn deinit(self: Location) void {
+            return pb_deinit(self);
+        }
     };
-
-
-    pub fn encode(self: Location, allocator: Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
-    pub fn decode(input: []const u8, allocator: Allocator) !Location {
-        return pb_decode(Location, input, allocator);
-    }
-    pub fn init(allocator: Allocator) Location {
-        return pb_init(Location, allocator);
-    }
-    pub fn deinit(self: Location) void {
-        return pb_deinit(self);
-    }
-};
-
 
     pub fn encode(self: SourceCodeInfo, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -741,38 +706,35 @@ pub const GeneratedCodeInfo = struct {
         .annotation = fd(1, .{ .List = .String }, []const u8),
     };
 
-pub const Annotation = struct {
-pub const Semantic = enum(i32) {
-   NONE = 0,
-   SET = 1,
-   ALIAS = 2,
-    _,
-};
+    pub const Annotation = struct {
+        pub const Semantic = enum(i32) {
+            NONE = 0,
+            SET = 1,
+            ALIAS = 2,
+            _,
+        };
 
+        pub const _desc_table = .{
+            .path = fd(1, .{ .List = .String }, []const u8),
+            .source_file = fd(2, .{ .List = .String }, []const u8),
+            .begin = fd(3, .{ .List = .String }, []const u8),
+            .end = fd(4, .{ .List = .String }, []const u8),
+            .semantic = fd(5, .{ .List = .String }, []const u8),
+        };
 
-    pub const _desc_table = .{
-        .path = fd(1, .{ .List = .String }, []const u8),
-        .source_file = fd(2, .{ .List = .String }, []const u8),
-        .begin = fd(3, .{ .List = .String }, []const u8),
-        .end = fd(4, .{ .List = .String }, []const u8),
-        .semantic = fd(5, .{ .List = .String }, []const u8),
+        pub fn encode(self: Annotation, allocator: Allocator) ![]u8 {
+            return pb_encode(self, allocator);
+        }
+        pub fn decode(input: []const u8, allocator: Allocator) !Annotation {
+            return pb_decode(Annotation, input, allocator);
+        }
+        pub fn init(allocator: Allocator) Annotation {
+            return pb_init(Annotation, allocator);
+        }
+        pub fn deinit(self: Annotation) void {
+            return pb_deinit(self);
+        }
     };
-
-
-    pub fn encode(self: Annotation, allocator: Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
-    pub fn decode(input: []const u8, allocator: Allocator) !Annotation {
-        return pb_decode(Annotation, input, allocator);
-    }
-    pub fn init(allocator: Allocator) Annotation {
-        return pb_init(Annotation, allocator);
-    }
-    pub fn deinit(self: Annotation) void {
-        return pb_deinit(self);
-    }
-};
-
 
     pub fn encode(self: GeneratedCodeInfo, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
