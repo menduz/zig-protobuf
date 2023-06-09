@@ -21,11 +21,11 @@ pub const Varints = struct {
     a_bool: ?bool,
 
     pub const _desc_table = .{
-        .sint32 = fd(1, .{ .Varint = .ZigZagOptimized }),
-        .sint64 = fd(2, .{ .Varint = .ZigZagOptimized }),
-        .uint32 = fd(3, .{ .Varint = .Simple }),
-        .uint64 = fd(4, .{ .Varint = .Simple }),
-        .a_bool = fd(5, .{ .Varint = .Simple }),
+        .sint32 = fd(1, .{ .Varint = .ZigZagOptimized }, ?i32),
+        .sint64 = fd(2, .{ .Varint = .ZigZagOptimized }, ?i64),
+        .uint32 = fd(3, .{ .Varint = .Simple }, ?u32),
+        .uint64 = fd(4, .{ .Varint = .Simple }, ?u64),
+        .a_bool = fd(5, .{ .Varint = .Simple }, ?bool),
     };
 
     pub fn encode(self: Varints, allocator: Allocator) ![]u8 {

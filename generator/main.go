@@ -90,37 +90,51 @@ func getFieldKindName(field *protogen.Field) (string, error) {
 }
 
 func getFieldDescriptor(field *protogen.Field) (string, error) {
+
+	typeName, err := getFieldKindName(field)
+
+	if err != nil {
+		return "", err
+	}
+
 	if field.Desc.IsList() {
+
+		kindOfList := ".List"
+
+		if field.Desc.IsPacked() {
+			kindOfList = ".PackedList"
+		}
+
 		switch field.Desc.Kind() {
 		case StringKind, BytesKind:
-			return fmt.Sprintf("fd(%d, .{ .List = .String })", field.Desc.Number()), nil
-		case Sfixed64Kind, Sfixed32Kind, Fixed32Kind, Fixed64Kind, DoubleKind, FloatKind:
-			return fmt.Sprintf("fd(%d, .{ .List = .FixedInt })", field.Desc.Number()), nil
-		case Sint32Kind, Sint64Kind, Int64Kind:
-			return fmt.Sprintf("fd(%d, .{ .List = .{ .Varint = .ZigZagOptimized } })", field.Desc.Number()), nil
+			return fmt.Sprintf("fd(%d, .{ %s = .String }, %s)", field.Desc.Number(), kindOfList, typeName), nil
+		case Sfixed64Kind, Sfixed32Kind, Fixed32Kind, Fixed64Kind, DoubleKind, FloatKind, Int64Kind:
+			return fmt.Sprintf("fd(%d, .{ %s = .FixedInt }, %s)", field.Desc.Number(), kindOfList, typeName), nil
+		case Sint32Kind, Sint64Kind:
+			return fmt.Sprintf("fd(%d, .{ %s = .{ .Varint = .ZigZagOptimized } }, %s)", field.Desc.Number(), kindOfList, typeName), nil
 		case Uint32Kind, Uint64Kind, BoolKind, Int32Kind:
-			return fmt.Sprintf("fd(%d, .{ .List = .{ .Varint = .Simple } })", field.Desc.Number()), nil
+			return fmt.Sprintf("fd(%d, .{ %s = .{ .Varint = .Simple } }, %s)", field.Desc.Number(), kindOfList, typeName), nil
 		case MessageKind:
-			return fmt.Sprintf("fd(%d, .{ .List = .SubMessage })", field.Desc.Number()), nil
+			return fmt.Sprintf("fd(%d, .{ %s = .SubMessage }, %s)", field.Desc.Number(), kindOfList, typeName), nil
 		case EnumKind:
-			return fmt.Sprintf("fd(%d, .{ .List = .{ .Varint = .ZigZagOptimized } })", field.Desc.Number()), nil
+			return fmt.Sprintf("fd(%d, .{ %s = .{ .Varint = .ZigZagOptimized } }, %s)", field.Desc.Number(), kindOfList, typeName), nil
 		default:
 			return "", fmt.Errorf("unmanaged field type in  getFieldDescriptor 1 %s", field.Desc.Kind())
 		}
 	} else {
 		switch field.Desc.Kind() {
-		case Sfixed64Kind, Sfixed32Kind, Fixed32Kind, Fixed64Kind, DoubleKind, FloatKind:
-			return fmt.Sprintf("fd(%d, .FixedInt)", field.Desc.Number()), nil
-		case Sint32Kind, Sint64Kind, Int64Kind:
-			return fmt.Sprintf("fd(%d, .{ .Varint = .ZigZagOptimized })", field.Desc.Number()), nil
+		case Sfixed64Kind, Sfixed32Kind, Fixed32Kind, Fixed64Kind, DoubleKind, FloatKind, Int64Kind:
+			return fmt.Sprintf("fd(%d, .FixedInt, %s)", field.Desc.Number(), typeName), nil
+		case Sint32Kind, Sint64Kind:
+			return fmt.Sprintf("fd(%d, .{ .Varint = .ZigZagOptimized }, %s)", field.Desc.Number(), typeName), nil
 		case Uint32Kind, Uint64Kind, BoolKind, Int32Kind:
-			return fmt.Sprintf("fd(%d, .{ .Varint = .Simple })", field.Desc.Number()), nil
+			return fmt.Sprintf("fd(%d, .{ .Varint = .Simple }, %s)", field.Desc.Number(), typeName), nil
 		case StringKind, BytesKind:
-			return fmt.Sprintf("fd(%d, .String)", field.Desc.Number()), nil
+			return fmt.Sprintf("fd(%d, .String, %s)", field.Desc.Number(), typeName), nil
 		case MessageKind:
-			return fmt.Sprintf("fd(%d, .{ .SubMessage = {} })", field.Desc.Number()), nil
+			return fmt.Sprintf("fd(%d, .{ .SubMessage = {} }, %s)", field.Desc.Number(), typeName), nil
 		case EnumKind:
-			return fmt.Sprintf("fd(%d, .{ .Varint = .ZigZagOptimized })", field.Desc.Number()), nil
+			return fmt.Sprintf("fd(%d, .{ .Varint = .ZigZagOptimized }, %s)", field.Desc.Number(), typeName), nil
 		default:
 			return "", fmt.Errorf("unmanaged field type in  getFieldDescriptor 2 %s", field.Desc.Kind())
 		}
@@ -144,28 +158,12 @@ func generateFieldDef(field *protogen.Field, g *protogen.GeneratedFile) error {
 		// 	g.P("    //", field.Desc.Message().ParentFile())
 		// }
 
-		defaultValue := ""
-
-		if field.Desc.IsList() {
-		} else if field.Desc.HasOptionalKeyword() || field.Desc.IsMap() {
-			defaultValue = " = null"
-		} else {
-			switch field.Desc.Kind() {
-			case StringKind:
-				defaultValue = " = \"\""
-			case Int32Kind, Int64Kind, Sint32Kind, Sint64Kind, Uint32Kind, Uint64Kind, FloatKind, DoubleKind:
-				defaultValue = " = 0"
-			case BoolKind:
-				defaultValue = " = false"
-			}
-		}
-
 		for _, c := range strings.Split(field.Comments.Leading.String(), "\n") {
 			if strings.TrimSpace(c) != "" {
 				g.P(c)
 			}
 		}
-		g.P("    ", fieldName(field.Desc.Name()), ": ", fieldKindName, defaultValue, ",")
+		g.P("    ", fieldName(field.Desc.Name()), ": ", fieldKindName, ",")
 	}
 	return nil
 }

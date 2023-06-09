@@ -8,7 +8,7 @@ pub fn main() !void {
     const stdin = &std.io.getStdIn();
 
     // Read the contents
-    const buffer_size = 2000;
+    const buffer_size = 1024 * 1024 * 10;
     const file_buffer = try stdin.readToEndAlloc(allocator, buffer_size);
     defer allocator.free(file_buffer);
 

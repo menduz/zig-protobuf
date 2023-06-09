@@ -12,7 +12,7 @@ const ArrayList = std.ArrayList;
 const VarintType = enum { Simple, ZigZagOptimized };
 
 /// Enum describing the different field types available.
-pub const FieldTypeTag = enum { Varint, FixedInt, SubMessage, List, String, OneOf, Map };
+pub const FieldTypeTag = enum { Varint, FixedInt, SubMessage, List, PackedList, String, OneOf, Map };
 
 /// Enum describing the content type of a repeated field.
 pub const ListTypeTag = enum {
@@ -71,6 +71,7 @@ pub const FieldType = union(FieldTypeTag) {
     SubMessage,
     String,
     List: ListType,
+    PackedList: ListType,
     OneOf: type,
     Map: MapData,
 
@@ -93,7 +94,7 @@ pub const FieldType = union(FieldTypeTag) {
                 32 => 5,
                 else => @compileLog("Invalid size for fixed int :", @bitSizeOf(real_type), "type is ", real_type),
             },
-            .String, .SubMessage, .List, .Map => 2,
+            .String, .SubMessage, .PackedList, .List, .Map => 2,
             .OneOf => unreachable,
         };
     }
@@ -102,13 +103,18 @@ pub const FieldType = union(FieldTypeTag) {
 /// Structure describing a field. Most of the relevant informations are
 /// In the FieldType data. Tag is optional as OneOf fields are "virtual" fields.
 pub const FieldDescriptor = struct {
+    fieldNumber: ?u32,
     tag: ?u32,
     ftype: FieldType,
 };
 
 /// Helper function to build a FieldDescriptor. Makes code clearer, mostly.
-pub fn fd(comptime tag: ?u32, comptime ftype: FieldType) FieldDescriptor {
-    return FieldDescriptor{ .tag = tag, .ftype = ftype };
+pub fn fd(comptime fieldNumber: ?u32, comptime ftype: FieldType, comptime T: type) FieldDescriptor {
+    // calculates the comptime value of (tag_index << 3) + wire type.
+    // This is fully calculated at comptime which is great.
+    const tag: ?u32 = if (fieldNumber) |num| ((num << 3) | ftype.get_wirevalue(T)) else null;
+
+    return FieldDescriptor{ .fieldNumber = fieldNumber, .ftype = ftype, .tag = tag };
 }
 
 // encoding
@@ -240,44 +246,35 @@ fn append_list_of_fixed(pb: *ArrayList(u8), value: anytype) !void {
 }
 
 /// Appends a list of varint to the pb buffer.
-fn append_list_of_varint(pb: *ArrayList(u8), value_list: anytype, comptime varint_type: VarintType) !void {
-    const len_index = pb.items.len;
+fn append_list_of_varint(pb: *ArrayList(u8), comptime field: FieldDescriptor, value_list: anytype, comptime varint_type: VarintType) !void {
+    // const len_index = pb.items.len;
     for (value_list.items) |item| {
+        try append_tag(pb, field);
         try append_varint(pb, item, varint_type);
     }
-    const size_encoded = pb.items.len - len_index;
-    try insert_raw_varint(pb, size_encoded, len_index);
+    // const size_encoded = pb.items.len - len_index;
+    // try insert_raw_varint(pb, size_encoded, len_index);
 }
 
 /// Appends a list of submessages to the pb_buffer.
-fn append_list_of_submessages(pb: *ArrayList(u8), value_list: anytype) !void {
-    const len_index = pb.items.len;
+fn append_list_of_submessages(pb: *ArrayList(u8), comptime field: FieldDescriptor, value_list: anytype) !void {
     for (value_list.items) |item| {
+        try append_tag(pb, field);
         try append_submessage(pb, item);
     }
-    const size_encoded = pb.items.len - len_index;
-    try insert_raw_varint(pb, size_encoded, len_index);
 }
 
 /// Appends a list of submessages to the pb_buffer.
-fn append_list_of_strings(pb: *ArrayList(u8), value_list: anytype) !void {
-    const len_index = pb.items.len;
+fn append_list_of_strings(pb: *ArrayList(u8), comptime field: FieldDescriptor, value_list: anytype) !void {
     for (value_list.items) |item| {
+        try append_tag(pb, field);
         try append_const_bytes(pb, item);
     }
-    const size_encoded = pb.items.len - len_index;
-    try insert_raw_varint(pb, size_encoded, len_index);
-}
-
-/// calculates the comptime value of (tag_index << 3) + wire type.
-/// This is fully calculated at comptime which is great.
-fn get_full_tag_value(comptime field: FieldDescriptor, comptime value_type: type) ?u32 {
-    return if (field.tag) |tag| ((tag << 3) | field.ftype.get_wirevalue(value_type)) else null;
 }
 
 /// Appends the full tag of the field in the pb buffer, if there is any.
-fn append_tag(pb: *ArrayList(u8), comptime field: FieldDescriptor, comptime value_type: type) !void {
-    if (get_full_tag_value(field, value_type)) |tag_value| {
+fn append_tag(pb: *ArrayList(u8), comptime field: FieldDescriptor) !void {
+    if (field.tag) |tag_value| {
         try append_varint(pb, tag_value, .Simple);
     }
 }
@@ -289,7 +286,7 @@ fn MapSubmessage(comptime key_data: KeyValueTypeData, comptime value_data: KeyVa
         key: ?key_data.t,
         value: ?value_data.t,
 
-        pub const _desc_table = .{ .key = fd(1, key_data.pb_data.toFieldType()), .value = fd(2, value_data.pb_data.toFieldType()) };
+        pub const _desc_table = .{ .key = fd(1, key_data.pb_data.toFieldType(), ?key_data.t), .value = fd(2, value_data.pb_data.toFieldType(), ?value_data.t) };
 
         pub fn encode(self: Self, allocator: Allocator) ![]u8 {
             return pb_encode(self, allocator);
@@ -334,34 +331,42 @@ fn append_map(pb: *ArrayList(u8), comptime field: FieldDescriptor, map: anytype)
 
 /// Appends a value to the pb buffer. Starts by appending the tag, then a comptime switch
 /// routes the code to the correct type of data to append.
-fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, comptime value_type: type, value: anytype) !void {
-    try append_tag(pb, field, value_type);
+fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, value: anytype) !void {
     switch (field.ftype) {
         .Varint => |varint_type| {
+            try append_tag(pb, field);
             try append_varint(pb, value, varint_type);
         },
         .FixedInt => {
+            try append_tag(pb, field);
             try append_fixed(pb, value);
         },
         .SubMessage => {
+            try append_tag(pb, field);
             try append_submessage(pb, value);
         },
         .String => {
+            try append_tag(pb, field);
             try append_const_bytes(pb, value);
+        },
+        .PackedList => |_| {
+            try append_tag(pb, field);
+            @panic(".PackedList append not implemented");
         },
         .List => |list_type| {
             switch (list_type) {
                 .FixedInt => {
+                    try append_tag(pb, field);
                     try append_list_of_fixed(pb, value);
                 },
                 .SubMessage => {
-                    try append_list_of_submessages(pb, value);
+                    try append_list_of_submessages(pb, field, value);
                 },
                 .String => {
-                    try append_list_of_strings(pb, value);
+                    try append_list_of_strings(pb, field, value);
                 },
                 .Varint => |varint_type| {
-                    try append_list_of_varint(pb, value, varint_type);
+                    try append_list_of_varint(pb, field, value, varint_type);
                 },
             }
         },
@@ -369,7 +374,7 @@ fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, comptime value_ty
             const active = @tagName(value);
             inline for (@typeInfo(@TypeOf(union_type._union_desc)).Struct.fields) |union_field| {
                 if (std.mem.eql(u8, union_field.name, active)) {
-                    try append(pb, @field(union_type._union_desc, union_field.name), @TypeOf(@field(value, union_field.name)), @field(value, union_field.name));
+                    try append(pb, @field(union_type._union_desc, union_field.name), @field(value, union_field.name));
                 }
             }
         },
@@ -388,15 +393,15 @@ fn internal_pb_encode(pb: *ArrayList(u8), data: anytype) !void {
     inline for (field_list) |field| {
         if (@typeInfo(field.type) == .Optional) {
             if (@field(data, field.name)) |value| {
-                try append(pb, @field(data_type._desc_table, field.name), @TypeOf(value), value);
+                try append(pb, @field(data_type._desc_table, field.name), value);
             }
         } else {
             switch (@field(data_type._desc_table, field.name).ftype) {
                 .List => if (@field(data, field.name).items.len != 0) {
-                    try append(pb, @field(data_type._desc_table, field.name), @TypeOf(@field(data, field.name)), @field(data, field.name));
+                    try append(pb, @field(data_type._desc_table, field.name), @field(data, field.name));
                 },
                 .Map => if (@field(data, field.name).count() != 0) {
-                    try append(pb, @field(data_type._desc_table, field.name), @TypeOf(@field(data, field.name)), @field(data, field.name));
+                    try append(pb, @field(data_type._desc_table, field.name), @field(data, field.name));
                 },
                 else => @compileLog("You shouldn't be here"),
             }
@@ -422,13 +427,16 @@ pub fn pb_init(comptime T: type, allocator: Allocator) T {
             .Varint, .FixedInt, .SubMessage => {
                 @field(value, field.name) = if (field.default_value) |val|
                     @ptrCast(*align(1) const field.type, val).*
-                else
-                    null;
+                else switch (field.type) {
+                    bool => false,
+                    i32, i64, i8, i16, u8, u32, u64 => 0,
+                    else => null,
+                };
             },
             .String => {
                 @field(value, field.name) = null;
             },
-            .List, .Map => {
+            .List, .Map, .PackedList => {
                 @field(value, field.name) = @TypeOf(@field(value, field.name)).init(allocator);
             },
             .OneOf => {
@@ -464,6 +472,9 @@ fn deinit_field(field: anytype, comptime field_name: []const u8, comptime ftype:
             }
             @field(field, field_name).deinit();
         },
+        .PackedList => {
+            @panic("deinit PackedList not implemented");
+        },
         .String => {
             // nothing?
         },
@@ -498,7 +509,7 @@ const ExtractedData = union(ExtractedDataTag) { RawValue: u64, Slice: []const u8
 
 /// Unit of extracted data from a stream
 /// Please not that "tag" is supposed to be the full tag. See get_full_tag_value.
-const Extracted = struct { tag: u32, data: ExtractedData };
+const Extracted = struct { tag: u32, fieldNumber: u32, data: ExtractedData };
 
 /// Decoded varint value generic type
 fn DecodedVarint(comptime T: type) type {
@@ -635,9 +646,8 @@ const WireDecoderIterator = struct {
         if (state.current_index < state.input.len) {
             const tag_and_wire = decode_varint(u32, state.input[state.current_index..]);
             state.current_index += tag_and_wire.size;
-            const tag: u32 = tag_and_wire.value;
-            const wire_value = tag_and_wire.value & 0b00000111;
-            const data: ExtractedData = switch (wire_value) {
+            const wire_type = tag_and_wire.value & 0b00000111;
+            const data: ExtractedData = switch (wire_type) {
                 0 => blk: {
                     const varint = decode_varint(u64, state.input[state.current_index..]);
                     state.current_index += varint.size;
@@ -661,10 +671,12 @@ const WireDecoderIterator = struct {
                     state.current_index += size.value + size.size;
                     break :blk value;
                 },
-                else => @panic("Not implemented yet"),
+                else => {
+                    @panic("Not implemented yet");
+                },
             };
 
-            return Extracted{ .tag = tag, .data = data };
+            return Extracted{ .tag = tag_and_wire.value, .data = data, .fieldNumber = tag_and_wire.value >> 3 };
         } else {
             return null;
         }
@@ -705,7 +717,7 @@ fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type
     switch (list_type) {
         .FixedInt => {
             switch (T) {
-                u8, bool => try array.appendSlice(input),
+                u8 => try array.appendSlice(input, 1),
                 u16, i16, u32, i32, u64, i64, f32, f64 => {
                     var fixed_iterator = FixedDecoderIterator(T){ .input = input };
                     while (fixed_iterator.next()) |value| {
@@ -722,17 +734,43 @@ fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type
             }
         },
         .SubMessage => {
-            var submessage_iterator = SubmessageDecoderIterator(T){ .input = input, .allocator = allocator };
-            while (try submessage_iterator.next()) |value| {
+            try array.append(try T.decode(input, allocator));
+        },
+        .String => {
+            try array.append(input);
+        },
+    }
+}
+
+fn decode_packed_list(input: []const u8, comptime list_type: ListType, comptime T: type, array: *ArrayList(T), allocator: Allocator) Allocator.Error!void {
+    _ = allocator;
+    const length = decode_varint(u64, input);
+    const newSlice = input[length.size..];
+
+    switch (list_type) {
+        .FixedInt => {
+            switch (T) {
+                u8 => try array.appendSlice(newSlice),
+                u16, i16, u32, i32, u64, i64, f32, f64 => {
+                    var fixed_iterator = FixedDecoderIterator(T){ .input = newSlice };
+                    while (fixed_iterator.next()) |value| {
+                        try array.append(value);
+                    }
+                },
+                else => @compileError(@typeName(T)),
+            }
+        },
+        .Varint => |varint_type| {
+            var varint_iterator = VarintDecoderIterator(T, varint_type){ .input = newSlice };
+            while (varint_iterator.next()) |value| {
                 try array.append(value);
             }
         },
+        .SubMessage => {
+            @panic("packed submessages are not defined by protobuf");
+        },
         .String => {
-            // @compileError(@typeName(T));
-            // var submessage_iterator = SubmessageDecoderIterator(T){ .input = input, .allocator = allocator };
-            // while (try submessage_iterator.next()) |value| {
-            //     try array.append(value);
-            // }
+            @panic("packed strings are not defined by protobuf");
         },
     }
 }
@@ -764,6 +802,10 @@ fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime 
             const child_type = @typeInfo(@TypeOf(@field(result, field.name).items)).Pointer.child;
             try decode_list(extracted_data.data.Slice, list_type, child_type, &@field(result, field.name), allocator);
         },
+        .PackedList => |list_type| {
+            const child_type = @typeInfo(@TypeOf(@field(result, field.name).items)).Pointer.child;
+            try decode_packed_list(extracted_data.data.Slice, list_type, child_type, &@field(result, field.name), allocator);
+        },
         .Map => |map_data| {
             const map_type = get_map_submessage_type(map_data);
             var submessage_iterator = SubmessageDecoderIterator(map_type){ .input = extracted_data.data.Slice, .allocator = allocator };
@@ -777,18 +819,9 @@ fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime 
     }
 }
 
-inline fn is_tag_known(comptime field_desc: FieldDescriptor, comptime T: type, tag_to_check: u32) bool {
-    if (field_desc.tag) |_| {
-        if (get_full_tag_value(field_desc, T)) |tag_value| {
-            return tag_value == tag_to_check;
-        }
-    } else {
-        const desc_union = field_desc.ftype.OneOf._union_desc;
-        inline for (@typeInfo(@TypeOf(desc_union)).Struct.fields) |union_field| {
-            if (is_tag_known(@field(desc_union, union_field.name), union_field.field_type, tag_to_check)) {
-                return true;
-            }
-        }
+inline fn is_tag_known(comptime field_desc: FieldDescriptor, tag_to_check: Extracted) bool {
+    if (field_desc.tag) |tag| {
+        return tag == tag_to_check.tag;
     }
 
     return false;
@@ -802,20 +835,20 @@ pub fn pb_decode(comptime T: type, input: []const u8, allocator: Allocator) !T {
     var iterator = WireDecoderIterator{ .input = input };
 
     while (try iterator.next()) |extracted_data| {
-        _ = inline for (@typeInfo(T).Struct.fields) |field| {
+        if (extracted_data.data == .Slice) {} else {}
+        inline for (@typeInfo(T).Struct.fields) |field| {
             const v = @field(T._desc_table, field.name);
-            if (is_tag_known(v, field.type, extracted_data.tag)) {
-                try decode_data(T, v, field, &result, extracted_data, allocator);
+            if (is_tag_known(v, extracted_data)) {
+                break try decode_data(T, v, field, &result, extracted_data, allocator);
             }
-        } else null;
+        } else {
+            if (extracted_data.data == .Slice) {} else {}
+            @panic("unknown field");
+        }
     }
 
     return result;
 }
-
-// TBD
-
-// tests
 
 const testing = std.testing;
 

@@ -22,12 +22,12 @@ pub const FixedSizes = struct {
     float: ?f32,
 
     pub const _desc_table = .{
-        .sfixed64 = fd(1, .FixedInt),
-        .sfixed32 = fd(2, .FixedInt),
-        .fixed32 = fd(3, .FixedInt),
-        .fixed64 = fd(4, .FixedInt),
-        .double = fd(5, .FixedInt),
-        .float = fd(6, .FixedInt),
+        .sfixed64 = fd(1, .FixedInt, ?i64),
+        .sfixed32 = fd(2, .FixedInt, ?i32),
+        .fixed32 = fd(3, .FixedInt, ?u32),
+        .fixed64 = fd(4, .FixedInt, ?u64),
+        .double = fd(5, .FixedInt, ?f64),
+        .float = fd(6, .FixedInt, ?f32),
     };
 
     pub fn encode(self: FixedSizes, allocator: Allocator) ![]u8 {
