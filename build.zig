@@ -26,10 +26,18 @@ pub fn build(b: *std.build.Builder) void {
     // running `zig build`).
     b.installArtifact(lib);
 
+    const generate = b.addSystemCommand(&[_][]const u8{ "bash", "test.sh" });
+
     var tests = [_]*std.build.LibExeObjStep{
         b.addTest(.{
             .name = "protobuf",
             .root_source_file = .{ .path = "src/protobuf.zig" },
+            .target = target,
+            .optimize = optimize,
+        }),
+        b.addTest(.{
+            .name = "generated",
+            .root_source_file = .{ .path = "tests/generated.zig" },
             .target = target,
             .optimize = optimize,
         }),
@@ -71,5 +79,6 @@ pub fn build(b: *std.build.Builder) void {
         // This will evaluate the `test` step rather than the default, which is "install".
         const run_main_tests = b.addRunArtifact(test_item);
         test_step.dependOn(&run_main_tests.step);
+        test_step.dependOn(&generate.step);
     }
 }

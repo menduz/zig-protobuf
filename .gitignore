@@ -5,3 +5,4 @@ zig-cache
 generator/**/*.zig
 generator/**/protoc-gen-zig*
 zig-out
+generator/protoc-gen-main
