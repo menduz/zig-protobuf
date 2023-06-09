@@ -12,11 +12,12 @@ const ArrayList = std.ArrayList;
 const VarintType = enum { Simple, ZigZagOptimized };
 
 /// Enum describing the different field types available.
-pub const FieldTypeTag = enum { Varint, FixedInt, SubMessage, List, OneOf, Map };
+pub const FieldTypeTag = enum { Varint, FixedInt, SubMessage, List, String, OneOf, Map };
 
 /// Enum describing the content type of a repeated field.
 pub const ListTypeTag = enum {
     Varint,
+    String,
     FixedInt,
     SubMessage,
 };
@@ -24,6 +25,7 @@ pub const ListTypeTag = enum {
 /// Tagged union for repeated fields, giving the details of the underlying type.
 pub const ListType = union(ListTypeTag) {
     Varint: VarintType,
+    String,
     FixedInt,
     SubMessage,
 };
@@ -67,6 +69,7 @@ pub const FieldType = union(FieldTypeTag) {
     Varint: VarintType,
     FixedInt,
     SubMessage,
+    String,
     List: ListType,
     OneOf: type,
     Map: MapData,
@@ -90,7 +93,7 @@ pub const FieldType = union(FieldTypeTag) {
                 32 => 5,
                 else => @compileLog("Invalid size for fixed int :", @bitSizeOf(real_type), "type is ", real_type),
             },
-            .SubMessage, .List, .Map => 2,
+            .String, .SubMessage, .List, .Map => 2,
             .OneOf => unreachable,
         };
     }
@@ -217,6 +220,12 @@ fn append_bytes(pb: *ArrayList(u8), value: *const ArrayList(u8)) !void {
     try pb.appendSlice(value.items);
 }
 
+/// Simple appending of a list of bytes.
+fn append_const_bytes(pb: *ArrayList(u8), value: []const u8) !void {
+    try append_as_varint(pb, value.len, .Simple);
+    try pb.appendSlice(value);
+}
+
 /// simple appending of a list of fixed-size data.
 fn append_list_of_fixed(pb: *ArrayList(u8), value: anytype) !void {
     const total_len = @divFloor(value.items.len * @bitSizeOf(@typeInfo(@TypeOf(value.items)).Pointer.child), 8);
@@ -245,6 +254,16 @@ fn append_list_of_submessages(pb: *ArrayList(u8), value_list: anytype) !void {
     const len_index = pb.items.len;
     for (value_list.items) |item| {
         try append_submessage(pb, item);
+    }
+    const size_encoded = pb.items.len - len_index;
+    try insert_raw_varint(pb, size_encoded, len_index);
+}
+
+/// Appends a list of submessages to the pb_buffer.
+fn append_list_of_strings(pb: *ArrayList(u8), value_list: anytype) !void {
+    const len_index = pb.items.len;
+    for (value_list.items) |item| {
+        try append_const_bytes(pb, item);
     }
     const size_encoded = pb.items.len - len_index;
     try insert_raw_varint(pb, size_encoded, len_index);
@@ -327,6 +346,9 @@ fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, comptime value_ty
         .SubMessage => {
             try append_submessage(pb, value);
         },
+        .String => {
+            try append_const_bytes(pb, value);
+        },
         .List => |list_type| {
             switch (list_type) {
                 .FixedInt => {
@@ -334,6 +356,9 @@ fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, comptime value_ty
                 },
                 .SubMessage => {
                     try append_list_of_submessages(pb, value);
+                },
+                .String => {
+                    try append_list_of_strings(pb, value);
                 },
                 .Varint => |varint_type| {
                     try append_list_of_varint(pb, value, varint_type);
@@ -392,7 +417,6 @@ pub fn pb_encode(data: anytype, allocator: Allocator) ![]u8 {
 /// Generic init function. Properly initialise any field required. Meant to be embedded in generated structs.
 pub fn pb_init(comptime T: type, allocator: Allocator) T {
     var value: T = undefined;
-
     inline for (@typeInfo(T).Struct.fields) |field| {
         switch (@field(T._desc_table, field.name).ftype) {
             .Varint, .FixedInt, .SubMessage => {
@@ -400,6 +424,9 @@ pub fn pb_init(comptime T: type, allocator: Allocator) T {
                     @ptrCast(*align(1) const field.type, val).*
                 else
                     null;
+            },
+            .String => {
+                @field(value, field.name) = null;
             },
             .List, .Map => {
                 @field(value, field.name) = @TypeOf(@field(value, field.name)).init(allocator);
@@ -436,6 +463,9 @@ fn deinit_field(field: anytype, comptime field_name: []const u8, comptime ftype:
                 }
             }
             @field(field, field_name).deinit();
+        },
+        .String => {
+            // nothing?
         },
         .OneOf => |union_type| {
             if (@field(field, field_name)) |union_value| {
@@ -671,18 +701,18 @@ fn get_fixed_value(comptime T: type, raw: u64) T {
     };
 }
 
-fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type, array: *ArrayList(T), allocator: Allocator) !void {
+fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type, array: *ArrayList(T), allocator: Allocator) Allocator.Error!void {
     switch (list_type) {
         .FixedInt => {
             switch (T) {
-                u8 => try array.appendSlice(input),
-                u32, i32, u64, i64, f32, f64 => {
+                u8, bool => try array.appendSlice(input),
+                u16, i16, u32, i32, u64, i64, f32, f64 => {
                     var fixed_iterator = FixedDecoderIterator(T){ .input = input };
                     while (fixed_iterator.next()) |value| {
                         try array.append(value);
                     }
                 },
-                else => @compileError("Not a valid fixed value size"),
+                else => @compileError(@typeName(T)),
             }
         },
         .Varint => |varint_type| {
@@ -697,20 +727,38 @@ fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type
                 try array.append(value);
             }
         },
+        .String => {
+            // @compileError(@typeName(T));
+            // var submessage_iterator = SubmessageDecoderIterator(T){ .input = input, .allocator = allocator };
+            // while (try submessage_iterator.next()) |value| {
+            //     try array.append(value);
+            // }
+        },
     }
+}
+
+fn set_value(comptime T: type, comptime child_type: type, comptime fieldName: []const u8, result: *T, comptime ftype: FieldType, extracted_data: Extracted, allocator: Allocator) !void {
+    @field(result, fieldName) = switch (ftype) {
+        .Varint => |varint_type| get_varint_value(child_type, varint_type, extracted_data.data.RawValue),
+        .FixedInt => get_fixed_value(child_type, extracted_data.data.RawValue),
+        .SubMessage => try pb_decode(child_type, extracted_data.data.Slice, allocator),
+        .String => extracted_data.data.Slice,
+        else => @compileError(@typeName(child_type)),
+    };
 }
 
 fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime field: StructField, result: *T, extracted_data: Extracted, allocator: Allocator) !void {
     switch (field_desc.ftype) {
-        .Varint, .FixedInt, .SubMessage => {
-            const child_type = @typeInfo(field.type).Optional.child;
-
-            @field(result, field.name) = switch (field_desc.ftype) {
-                .Varint => |varint_type| get_varint_value(child_type, varint_type, extracted_data.data.RawValue),
-                .FixedInt => get_fixed_value(child_type, extracted_data.data.RawValue),
-                .SubMessage => try pb_decode(child_type, extracted_data.data.Slice, allocator),
-                else => @compileError("This shouldn't happen."),
-            };
+        .Varint, .FixedInt, .SubMessage, .String => {
+            switch (@typeInfo(field.type)) {
+                .Optional => {
+                    const child_type = @typeInfo(field.type).Optional.child;
+                    try set_value(T, child_type, field.name, result, field_desc.ftype, extracted_data, allocator);
+                },
+                else => {
+                    try set_value(T, field.type, field.name, result, field_desc.ftype, extracted_data, allocator);
+                },
+            }
         },
         .List => |list_type| {
             const child_type = @typeInfo(@TypeOf(@field(result, field.name).items)).Pointer.child;

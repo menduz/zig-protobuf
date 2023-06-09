@@ -26,7 +26,28 @@ pub fn build(b: *std.build.Builder) void {
     // running `zig build`).
     b.installArtifact(lib);
 
+    const protobuf = b.createModule(.{ .source_file = .{ .path = "src/protobuf.zig" } });
+
     const generate = b.addSystemCommand(&[_][]const u8{ "bash", "test.sh" });
+
+    const exe = b.addExecutable(.{
+        .name = "protoc-gen-zig",
+        // In this case the main source file is merely a path, however, in more
+        // complicated build scripts, this could be a generated file.
+        .root_source_file = .{ .path = "bootstrapped-generator/main.zig" },
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe.addModule("protobuf", protobuf);
+
+    // This declares intent for the executable to be installed into the
+    // standard location when the user invokes the "install" step (the default
+    // step when running `zig build`).
+    b.installArtifact(exe);
+
+    exe.step.dependOn(&generate.step);
+    exe.step.dependOn(&lib.step);
 
     var tests = [_]*std.build.LibExeObjStep{
         b.addTest(.{
@@ -68,8 +89,6 @@ pub fn build(b: *std.build.Builder) void {
     };
 
     const test_step = b.step("test", "Run library tests");
-
-    const protobuf = b.createModule(.{ .source_file = .{ .path = "src/protobuf.zig" } });
 
     for (tests) |test_item| {
         test_item.addModule("protobuf", protobuf);
