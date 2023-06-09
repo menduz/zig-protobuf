@@ -397,13 +397,19 @@ fn internal_pb_encode(pb: *ArrayList(u8), data: anytype) !void {
             }
         } else {
             switch (@field(data_type._desc_table, field.name).ftype) {
-                .List => if (@field(data, field.name).items.len != 0) {
+                .List, .PackedList => if (@field(data, field.name).items.len != 0) {
                     try append(pb, @field(data_type._desc_table, field.name), @field(data, field.name));
                 },
                 .Map => if (@field(data, field.name).count() != 0) {
                     try append(pb, @field(data_type._desc_table, field.name), @field(data, field.name));
                 },
-                else => @compileLog("You shouldn't be here"),
+                .Varint, .FixedInt => if (@as(u64, @field(data, field.name)) != 0) {
+                    try append(pb, @field(data_type._desc_table, field.name), @field(data, field.name));
+                },
+                .String => if (@field(data, field.name).len != 0) {
+                    try append(pb, @field(data_type._desc_table, field.name), @field(data, field.name));
+                },
+                else => @compileLog(@typeName(field.type)),
             }
         }
     }
