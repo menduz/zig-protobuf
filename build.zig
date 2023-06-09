@@ -28,7 +28,9 @@ pub fn build(b: *std.build.Builder) void {
 
     const protobuf = b.createModule(.{ .source_file = .{ .path = "src/protobuf.zig" } });
 
-    const generate = b.addSystemCommand(&[_][]const u8{ "bash", "test.sh" });
+    const generate = b.addSystemCommand(&[_][]const u8{ "bash", "bootstrap.sh" });
+    const testSh = b.addSystemCommand(&[_][]const u8{ "bash", "test.sh" });
+    _ = testSh;
 
     const exe = b.addExecutable(.{
         .name = "protoc-gen-zig",
