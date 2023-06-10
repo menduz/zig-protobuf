@@ -15,7 +15,7 @@ const fd = protobuf.fd;
 
 pub const FileDescriptorSet = struct {
     pub const _desc_table = .{
-        .file = fd(1, .{ .List = .String }, []const u8),
+        .file = fd(1, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.FileDescriptorProto)),
     };
 
     pub fn encode(self: FileDescriptorSet, allocator: Allocator) ![]u8 {
@@ -34,19 +34,19 @@ pub const FileDescriptorSet = struct {
 
 pub const FileDescriptorProto = struct {
     pub const _desc_table = .{
-        .name = fd(1, .{ .List = .String }, []const u8),
-        .package = fd(2, .{ .List = .String }, []const u8),
-        .dependency = fd(3, .{ .List = .String }, []const u8),
-        .public_dependency = fd(10, .{ .List = .String }, []const u8),
-        .weak_dependency = fd(11, .{ .List = .String }, []const u8),
-        .message_type = fd(4, .{ .List = .String }, []const u8),
-        .enum_type = fd(5, .{ .List = .String }, []const u8),
-        .service = fd(6, .{ .List = .String }, []const u8),
-        .extension = fd(7, .{ .List = .String }, []const u8),
-        .options = fd(8, .{ .List = .String }, []const u8),
-        .source_code_info = fd(9, .{ .List = .String }, []const u8),
-        .syntax = fd(12, .{ .List = .String }, []const u8),
-        .edition = fd(13, .{ .List = .String }, []const u8),
+        .name = fd(1, .String, ?[]const u8),
+        .package = fd(2, .String, ?[]const u8),
+        .dependency = fd(3, .{ .List = .String }, ArrayList([]const u8)),
+        .public_dependency = fd(10, .{ .List = .{ .Varint = .Simple } }, ArrayList(i32)),
+        .weak_dependency = fd(11, .{ .List = .{ .Varint = .Simple } }, ArrayList(i32)),
+        .message_type = fd(4, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.DescriptorProto)),
+        .enum_type = fd(5, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.EnumDescriptorProto)),
+        .service = fd(6, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.ServiceDescriptorProto)),
+        .extension = fd(7, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.FieldDescriptorProto)),
+        .options = fd(8, .{ .SubMessage = {} }, ?.google.protobuf.FileOptions),
+        .source_code_info = fd(9, .{ .SubMessage = {} }, ?.google.protobuf.SourceCodeInfo),
+        .syntax = fd(12, .String, ?[]const u8),
+        .edition = fd(13, .String, ?[]const u8),
     };
 
     pub fn encode(self: FileDescriptorProto, allocator: Allocator) ![]u8 {
@@ -65,23 +65,23 @@ pub const FileDescriptorProto = struct {
 
 pub const DescriptorProto = struct {
     pub const _desc_table = .{
-        .name = fd(1, .{ .List = .String }, []const u8),
-        .field = fd(2, .{ .List = .String }, []const u8),
-        .extension = fd(6, .{ .List = .String }, []const u8),
-        .nested_type = fd(3, .{ .List = .String }, []const u8),
-        .enum_type = fd(4, .{ .List = .String }, []const u8),
-        .extension_range = fd(5, .{ .List = .String }, []const u8),
-        .oneof_decl = fd(8, .{ .List = .String }, []const u8),
-        .options = fd(7, .{ .List = .String }, []const u8),
-        .reserved_range = fd(9, .{ .List = .String }, []const u8),
-        .reserved_name = fd(10, .{ .List = .String }, []const u8),
+        .name = fd(1, .String, ?[]const u8),
+        .field = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.FieldDescriptorProto)),
+        .extension = fd(6, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.FieldDescriptorProto)),
+        .nested_type = fd(3, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.DescriptorProto)),
+        .enum_type = fd(4, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.EnumDescriptorProto)),
+        .extension_range = fd(5, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.DescriptorProto.ExtensionRange)),
+        .oneof_decl = fd(8, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.OneofDescriptorProto)),
+        .options = fd(7, .{ .SubMessage = {} }, ?.google.protobuf.MessageOptions),
+        .reserved_range = fd(9, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.DescriptorProto.ReservedRange)),
+        .reserved_name = fd(10, .{ .List = .String }, ArrayList([]const u8)),
     };
 
     pub const ExtensionRange = struct {
         pub const _desc_table = .{
-            .start = fd(1, .{ .List = .String }, []const u8),
-            .end = fd(2, .{ .List = .String }, []const u8),
-            .options = fd(3, .{ .List = .String }, []const u8),
+            .start = fd(1, .{ .Varint = .Simple }, i32),
+            .end = fd(2, .{ .Varint = .Simple }, i32),
+            .options = fd(3, .{ .SubMessage = {} }, ?.google.protobuf.ExtensionRangeOptions),
         };
 
         pub fn encode(self: ExtensionRange, allocator: Allocator) ![]u8 {
@@ -100,8 +100,8 @@ pub const DescriptorProto = struct {
 
     pub const ReservedRange = struct {
         pub const _desc_table = .{
-            .start = fd(1, .{ .List = .String }, []const u8),
-            .end = fd(2, .{ .List = .String }, []const u8),
+            .start = fd(1, .{ .Varint = .Simple }, i32),
+            .end = fd(2, .{ .Varint = .Simple }, i32),
         };
 
         pub fn encode(self: ReservedRange, allocator: Allocator) ![]u8 {
@@ -140,19 +140,19 @@ pub const ExtensionRangeOptions = struct {
     };
 
     pub const _desc_table = .{
-        .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
-        .declaration = fd(2, .{ .List = .String }, []const u8),
-        .verification = fd(3, .{ .List = .String }, []const u8),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption)),
+        .declaration = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.ExtensionRangeOptions.Declaration)),
+        .verification = fd(3, .{ .Varint = .Simple }, .google.protobuf.ExtensionRangeOptions.VerificationState),
     };
 
     pub const Declaration = struct {
         pub const _desc_table = .{
-            .number = fd(1, .{ .List = .String }, []const u8),
-            .full_name = fd(2, .{ .List = .String }, []const u8),
-            .type = fd(3, .{ .List = .String }, []const u8),
-            .is_repeated = fd(4, .{ .List = .String }, []const u8),
-            .reserved = fd(5, .{ .List = .String }, []const u8),
-            .repeated = fd(6, .{ .List = .String }, []const u8),
+            .number = fd(1, .{ .Varint = .Simple }, i32),
+            .full_name = fd(2, .String, ?[]const u8),
+            .type = fd(3, .String, ?[]const u8),
+            .is_repeated = fd(4, .{ .Varint = .Simple }, bool),
+            .reserved = fd(5, .{ .Varint = .Simple }, bool),
+            .repeated = fd(6, .{ .Varint = .Simple }, bool),
         };
 
         pub fn encode(self: Declaration, allocator: Allocator) ![]u8 {
@@ -214,17 +214,17 @@ pub const FieldDescriptorProto = struct {
     };
 
     pub const _desc_table = .{
-        .name = fd(1, .{ .List = .String }, []const u8),
-        .number = fd(3, .{ .List = .String }, []const u8),
-        .label = fd(4, .{ .List = .String }, []const u8),
-        .type = fd(5, .{ .List = .String }, []const u8),
-        .type_name = fd(6, .{ .List = .String }, []const u8),
-        .extendee = fd(2, .{ .List = .String }, []const u8),
-        .default_value = fd(7, .{ .List = .String }, []const u8),
-        .oneof_index = fd(9, .{ .List = .String }, []const u8),
-        .json_name = fd(10, .{ .List = .String }, []const u8),
-        .options = fd(8, .{ .List = .String }, []const u8),
-        .proto3_optional = fd(17, .{ .List = .String }, []const u8),
+        .name = fd(1, .String, ?[]const u8),
+        .number = fd(3, .{ .Varint = .Simple }, i32),
+        .label = fd(4, .{ .Varint = .Simple }, .google.protobuf.FieldDescriptorProto.Label),
+        .type = fd(5, .{ .Varint = .Simple }, .google.protobuf.FieldDescriptorProto.Type),
+        .type_name = fd(6, .String, ?[]const u8),
+        .extendee = fd(2, .String, ?[]const u8),
+        .default_value = fd(7, .String, ?[]const u8),
+        .oneof_index = fd(9, .{ .Varint = .Simple }, i32),
+        .json_name = fd(10, .String, ?[]const u8),
+        .options = fd(8, .{ .SubMessage = {} }, ?.google.protobuf.FieldOptions),
+        .proto3_optional = fd(17, .{ .Varint = .Simple }, bool),
     };
 
     pub fn encode(self: FieldDescriptorProto, allocator: Allocator) ![]u8 {
@@ -243,8 +243,8 @@ pub const FieldDescriptorProto = struct {
 
 pub const OneofDescriptorProto = struct {
     pub const _desc_table = .{
-        .name = fd(1, .{ .List = .String }, []const u8),
-        .options = fd(2, .{ .List = .String }, []const u8),
+        .name = fd(1, .String, ?[]const u8),
+        .options = fd(2, .{ .SubMessage = {} }, ?.google.protobuf.OneofOptions),
     };
 
     pub fn encode(self: OneofDescriptorProto, allocator: Allocator) ![]u8 {
@@ -263,17 +263,17 @@ pub const OneofDescriptorProto = struct {
 
 pub const EnumDescriptorProto = struct {
     pub const _desc_table = .{
-        .name = fd(1, .{ .List = .String }, []const u8),
-        .value = fd(2, .{ .List = .String }, []const u8),
-        .options = fd(3, .{ .List = .String }, []const u8),
-        .reserved_range = fd(4, .{ .List = .String }, []const u8),
-        .reserved_name = fd(5, .{ .List = .String }, []const u8),
+        .name = fd(1, .String, ?[]const u8),
+        .value = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.EnumValueDescriptorProto)),
+        .options = fd(3, .{ .SubMessage = {} }, ?.google.protobuf.EnumOptions),
+        .reserved_range = fd(4, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.EnumDescriptorProto.EnumReservedRange)),
+        .reserved_name = fd(5, .{ .List = .String }, ArrayList([]const u8)),
     };
 
     pub const EnumReservedRange = struct {
         pub const _desc_table = .{
-            .start = fd(1, .{ .List = .String }, []const u8),
-            .end = fd(2, .{ .List = .String }, []const u8),
+            .start = fd(1, .{ .Varint = .Simple }, i32),
+            .end = fd(2, .{ .Varint = .Simple }, i32),
         };
 
         pub fn encode(self: EnumReservedRange, allocator: Allocator) ![]u8 {
@@ -306,9 +306,9 @@ pub const EnumDescriptorProto = struct {
 
 pub const EnumValueDescriptorProto = struct {
     pub const _desc_table = .{
-        .name = fd(1, .{ .List = .String }, []const u8),
-        .number = fd(2, .{ .List = .String }, []const u8),
-        .options = fd(3, .{ .List = .String }, []const u8),
+        .name = fd(1, .String, ?[]const u8),
+        .number = fd(2, .{ .Varint = .Simple }, i32),
+        .options = fd(3, .{ .SubMessage = {} }, ?.google.protobuf.EnumValueOptions),
     };
 
     pub fn encode(self: EnumValueDescriptorProto, allocator: Allocator) ![]u8 {
@@ -327,9 +327,9 @@ pub const EnumValueDescriptorProto = struct {
 
 pub const ServiceDescriptorProto = struct {
     pub const _desc_table = .{
-        .name = fd(1, .{ .List = .String }, []const u8),
-        .method = fd(2, .{ .List = .String }, []const u8),
-        .options = fd(3, .{ .List = .String }, []const u8),
+        .name = fd(1, .String, ?[]const u8),
+        .method = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.MethodDescriptorProto)),
+        .options = fd(3, .{ .SubMessage = {} }, ?.google.protobuf.ServiceOptions),
     };
 
     pub fn encode(self: ServiceDescriptorProto, allocator: Allocator) ![]u8 {
@@ -348,12 +348,12 @@ pub const ServiceDescriptorProto = struct {
 
 pub const MethodDescriptorProto = struct {
     pub const _desc_table = .{
-        .name = fd(1, .{ .List = .String }, []const u8),
-        .input_type = fd(2, .{ .List = .String }, []const u8),
-        .output_type = fd(3, .{ .List = .String }, []const u8),
-        .options = fd(4, .{ .List = .String }, []const u8),
-        .client_streaming = fd(5, .{ .List = .String }, []const u8),
-        .server_streaming = fd(6, .{ .List = .String }, []const u8),
+        .name = fd(1, .String, ?[]const u8),
+        .input_type = fd(2, .String, ?[]const u8),
+        .output_type = fd(3, .String, ?[]const u8),
+        .options = fd(4, .{ .SubMessage = {} }, ?.google.protobuf.MethodOptions),
+        .client_streaming = fd(5, .{ .Varint = .Simple }, bool),
+        .server_streaming = fd(6, .{ .Varint = .Simple }, bool),
     };
 
     pub fn encode(self: MethodDescriptorProto, allocator: Allocator) ![]u8 {
@@ -379,27 +379,27 @@ pub const FileOptions = struct {
     };
 
     pub const _desc_table = .{
-        .java_package = fd(1, .{ .List = .String }, []const u8),
-        .java_outer_classname = fd(8, .{ .List = .String }, []const u8),
-        .java_multiple_files = fd(10, .{ .List = .String }, []const u8),
-        .java_generate_equals_and_hash = fd(20, .{ .List = .String }, []const u8),
-        .java_string_check_utf8 = fd(27, .{ .List = .String }, []const u8),
-        .optimize_for = fd(9, .{ .List = .String }, []const u8),
-        .go_package = fd(11, .{ .List = .String }, []const u8),
-        .cc_generic_services = fd(16, .{ .List = .String }, []const u8),
-        .java_generic_services = fd(17, .{ .List = .String }, []const u8),
-        .py_generic_services = fd(18, .{ .List = .String }, []const u8),
-        .php_generic_services = fd(42, .{ .List = .String }, []const u8),
-        .deprecated = fd(23, .{ .List = .String }, []const u8),
-        .cc_enable_arenas = fd(31, .{ .List = .String }, []const u8),
-        .objc_class_prefix = fd(36, .{ .List = .String }, []const u8),
-        .csharp_namespace = fd(37, .{ .List = .String }, []const u8),
-        .swift_prefix = fd(39, .{ .List = .String }, []const u8),
-        .php_class_prefix = fd(40, .{ .List = .String }, []const u8),
-        .php_namespace = fd(41, .{ .List = .String }, []const u8),
-        .php_metadata_namespace = fd(44, .{ .List = .String }, []const u8),
-        .ruby_package = fd(45, .{ .List = .String }, []const u8),
-        .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
+        .java_package = fd(1, .String, ?[]const u8),
+        .java_outer_classname = fd(8, .String, ?[]const u8),
+        .java_multiple_files = fd(10, .{ .Varint = .Simple }, bool),
+        .java_generate_equals_and_hash = fd(20, .{ .Varint = .Simple }, bool),
+        .java_string_check_utf8 = fd(27, .{ .Varint = .Simple }, bool),
+        .optimize_for = fd(9, .{ .Varint = .Simple }, .google.protobuf.FileOptions.OptimizeMode),
+        .go_package = fd(11, .String, ?[]const u8),
+        .cc_generic_services = fd(16, .{ .Varint = .Simple }, bool),
+        .java_generic_services = fd(17, .{ .Varint = .Simple }, bool),
+        .py_generic_services = fd(18, .{ .Varint = .Simple }, bool),
+        .php_generic_services = fd(42, .{ .Varint = .Simple }, bool),
+        .deprecated = fd(23, .{ .Varint = .Simple }, bool),
+        .cc_enable_arenas = fd(31, .{ .Varint = .Simple }, bool),
+        .objc_class_prefix = fd(36, .String, ?[]const u8),
+        .csharp_namespace = fd(37, .String, ?[]const u8),
+        .swift_prefix = fd(39, .String, ?[]const u8),
+        .php_class_prefix = fd(40, .String, ?[]const u8),
+        .php_namespace = fd(41, .String, ?[]const u8),
+        .php_metadata_namespace = fd(44, .String, ?[]const u8),
+        .ruby_package = fd(45, .String, ?[]const u8),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption)),
     };
 
     pub fn encode(self: FileOptions, allocator: Allocator) ![]u8 {
@@ -418,12 +418,12 @@ pub const FileOptions = struct {
 
 pub const MessageOptions = struct {
     pub const _desc_table = .{
-        .message_set_wire_format = fd(1, .{ .List = .String }, []const u8),
-        .no_standard_descriptor_accessor = fd(2, .{ .List = .String }, []const u8),
-        .deprecated = fd(3, .{ .List = .String }, []const u8),
-        .map_entry = fd(7, .{ .List = .String }, []const u8),
-        .deprecated_legacy_json_field_conflicts = fd(11, .{ .List = .String }, []const u8),
-        .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
+        .message_set_wire_format = fd(1, .{ .Varint = .Simple }, bool),
+        .no_standard_descriptor_accessor = fd(2, .{ .Varint = .Simple }, bool),
+        .deprecated = fd(3, .{ .Varint = .Simple }, bool),
+        .map_entry = fd(7, .{ .Varint = .Simple }, bool),
+        .deprecated_legacy_json_field_conflicts = fd(11, .{ .Varint = .Simple }, bool),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption)),
     };
 
     pub fn encode(self: MessageOptions, allocator: Allocator) ![]u8 {
@@ -477,18 +477,18 @@ pub const FieldOptions = struct {
     };
 
     pub const _desc_table = .{
-        .ctype = fd(1, .{ .List = .String }, []const u8),
-        .@"packed" = fd(2, .{ .List = .String }, []const u8),
-        .jstype = fd(6, .{ .List = .String }, []const u8),
-        .lazy = fd(5, .{ .List = .String }, []const u8),
-        .unverified_lazy = fd(15, .{ .List = .String }, []const u8),
-        .deprecated = fd(3, .{ .List = .String }, []const u8),
-        .weak = fd(10, .{ .List = .String }, []const u8),
-        .debug_redact = fd(16, .{ .List = .String }, []const u8),
-        .retention = fd(17, .{ .List = .String }, []const u8),
-        .target = fd(18, .{ .List = .String }, []const u8),
-        .targets = fd(19, .{ .List = .String }, []const u8),
-        .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
+        .ctype = fd(1, .{ .Varint = .Simple }, .google.protobuf.FieldOptions.CType),
+        .@"packed" = fd(2, .{ .Varint = .Simple }, bool),
+        .jstype = fd(6, .{ .Varint = .Simple }, .google.protobuf.FieldOptions.JSType),
+        .lazy = fd(5, .{ .Varint = .Simple }, bool),
+        .unverified_lazy = fd(15, .{ .Varint = .Simple }, bool),
+        .deprecated = fd(3, .{ .Varint = .Simple }, bool),
+        .weak = fd(10, .{ .Varint = .Simple }, bool),
+        .debug_redact = fd(16, .{ .Varint = .Simple }, bool),
+        .retention = fd(17, .{ .Varint = .Simple }, .google.protobuf.FieldOptions.OptionRetention),
+        .target = fd(18, .{ .Varint = .Simple }, .google.protobuf.FieldOptions.OptionTargetType),
+        .targets = fd(19, .{ .List = .{ .Varint = .Simple } }, ArrayList(.google.protobuf.FieldOptions.OptionTargetType)),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption)),
     };
 
     pub fn encode(self: FieldOptions, allocator: Allocator) ![]u8 {
@@ -507,7 +507,7 @@ pub const FieldOptions = struct {
 
 pub const OneofOptions = struct {
     pub const _desc_table = .{
-        .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption)),
     };
 
     pub fn encode(self: OneofOptions, allocator: Allocator) ![]u8 {
@@ -526,10 +526,10 @@ pub const OneofOptions = struct {
 
 pub const EnumOptions = struct {
     pub const _desc_table = .{
-        .allow_alias = fd(2, .{ .List = .String }, []const u8),
-        .deprecated = fd(3, .{ .List = .String }, []const u8),
-        .deprecated_legacy_json_field_conflicts = fd(6, .{ .List = .String }, []const u8),
-        .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
+        .allow_alias = fd(2, .{ .Varint = .Simple }, bool),
+        .deprecated = fd(3, .{ .Varint = .Simple }, bool),
+        .deprecated_legacy_json_field_conflicts = fd(6, .{ .Varint = .Simple }, bool),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption)),
     };
 
     pub fn encode(self: EnumOptions, allocator: Allocator) ![]u8 {
@@ -548,8 +548,8 @@ pub const EnumOptions = struct {
 
 pub const EnumValueOptions = struct {
     pub const _desc_table = .{
-        .deprecated = fd(1, .{ .List = .String }, []const u8),
-        .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
+        .deprecated = fd(1, .{ .Varint = .Simple }, bool),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption)),
     };
 
     pub fn encode(self: EnumValueOptions, allocator: Allocator) ![]u8 {
@@ -568,8 +568,8 @@ pub const EnumValueOptions = struct {
 
 pub const ServiceOptions = struct {
     pub const _desc_table = .{
-        .deprecated = fd(33, .{ .List = .String }, []const u8),
-        .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
+        .deprecated = fd(33, .{ .Varint = .Simple }, bool),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption)),
     };
 
     pub fn encode(self: ServiceOptions, allocator: Allocator) ![]u8 {
@@ -595,9 +595,9 @@ pub const MethodOptions = struct {
     };
 
     pub const _desc_table = .{
-        .deprecated = fd(33, .{ .List = .String }, []const u8),
-        .idempotency_level = fd(34, .{ .List = .String }, []const u8),
-        .uninterpreted_option = fd(999, .{ .List = .String }, []const u8),
+        .deprecated = fd(33, .{ .Varint = .Simple }, bool),
+        .idempotency_level = fd(34, .{ .Varint = .Simple }, .google.protobuf.MethodOptions.IdempotencyLevel),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption)),
     };
 
     pub fn encode(self: MethodOptions, allocator: Allocator) ![]u8 {
@@ -616,19 +616,19 @@ pub const MethodOptions = struct {
 
 pub const UninterpretedOption = struct {
     pub const _desc_table = .{
-        .name = fd(2, .{ .List = .String }, []const u8),
-        .identifier_value = fd(3, .{ .List = .String }, []const u8),
-        .positive_int_value = fd(4, .{ .List = .String }, []const u8),
-        .negative_int_value = fd(5, .{ .List = .String }, []const u8),
-        .double_value = fd(6, .{ .List = .String }, []const u8),
-        .string_value = fd(7, .{ .List = .String }, []const u8),
-        .aggregate_value = fd(8, .{ .List = .String }, []const u8),
+        .name = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.UninterpretedOption.NamePart)),
+        .identifier_value = fd(3, .String, ?[]const u8),
+        .positive_int_value = fd(4, .{ .Varint = .Simple }, u64),
+        .negative_int_value = fd(5, .{ .Varint = .Simple }, i64),
+        .double_value = fd(6, .FixedInt, f64),
+        .string_value = fd(7, .String, ?[]const u8),
+        .aggregate_value = fd(8, .String, ?[]const u8),
     };
 
     pub const NamePart = struct {
         pub const _desc_table = .{
-            .name_part = fd(1, .{ .List = .String }, []const u8),
-            .is_extension = fd(2, .{ .List = .String }, []const u8),
+            .name_part = fd(1, .String, ?[]const u8),
+            .is_extension = fd(2, .{ .Varint = .Simple }, bool),
         };
 
         pub fn encode(self: NamePart, allocator: Allocator) ![]u8 {
@@ -661,16 +661,16 @@ pub const UninterpretedOption = struct {
 
 pub const SourceCodeInfo = struct {
     pub const _desc_table = .{
-        .location = fd(1, .{ .List = .String }, []const u8),
+        .location = fd(1, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.SourceCodeInfo.Location)),
     };
 
     pub const Location = struct {
         pub const _desc_table = .{
-            .path = fd(1, .{ .List = .String }, []const u8),
-            .span = fd(2, .{ .List = .String }, []const u8),
-            .leading_comments = fd(3, .{ .List = .String }, []const u8),
-            .trailing_comments = fd(4, .{ .List = .String }, []const u8),
-            .leading_detached_comments = fd(6, .{ .List = .String }, []const u8),
+            .path = fd(1, .{ .PackedList = .{ .Varint = .Simple } }, ArrayList(i32)),
+            .span = fd(2, .{ .PackedList = .{ .Varint = .Simple } }, ArrayList(i32)),
+            .leading_comments = fd(3, .String, ?[]const u8),
+            .trailing_comments = fd(4, .String, ?[]const u8),
+            .leading_detached_comments = fd(6, .{ .List = .String }, ArrayList([]const u8)),
         };
 
         pub fn encode(self: Location, allocator: Allocator) ![]u8 {
@@ -703,7 +703,7 @@ pub const SourceCodeInfo = struct {
 
 pub const GeneratedCodeInfo = struct {
     pub const _desc_table = .{
-        .annotation = fd(1, .{ .List = .String }, []const u8),
+        .annotation = fd(1, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.GeneratedCodeInfo.Annotation)),
     };
 
     pub const Annotation = struct {
@@ -715,11 +715,11 @@ pub const GeneratedCodeInfo = struct {
         };
 
         pub const _desc_table = .{
-            .path = fd(1, .{ .List = .String }, []const u8),
-            .source_file = fd(2, .{ .List = .String }, []const u8),
-            .begin = fd(3, .{ .List = .String }, []const u8),
-            .end = fd(4, .{ .List = .String }, []const u8),
-            .semantic = fd(5, .{ .List = .String }, []const u8),
+            .path = fd(1, .{ .PackedList = .{ .Varint = .Simple } }, ArrayList(i32)),
+            .source_file = fd(2, .String, ?[]const u8),
+            .begin = fd(3, .{ .Varint = .Simple }, i32),
+            .end = fd(4, .{ .Varint = .Simple }, i32),
+            .semantic = fd(5, .{ .Varint = .Simple }, .google.protobuf.GeneratedCodeInfo.Annotation.Semantic),
         };
 
         pub fn encode(self: Annotation, allocator: Allocator) ![]u8 {

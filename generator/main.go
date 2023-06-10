@@ -117,7 +117,7 @@ func getFieldDescriptor(field *protogen.Field) (string, error) {
 		case MessageKind:
 			return fmt.Sprintf("fd(%d, .{ %s = .SubMessage }, %s)", field.Desc.Number(), kindOfList, typeName), nil
 		case EnumKind:
-			return fmt.Sprintf("fd(%d, .{ %s = .{ .Varint = .ZigZagOptimized } }, %s)", field.Desc.Number(), kindOfList, typeName), nil
+			return fmt.Sprintf("fd(%d, .{ %s = .{ .Varint = .Simple } }, %s)", field.Desc.Number(), kindOfList, typeName), nil
 		default:
 			return "", fmt.Errorf("unmanaged field type in  getFieldDescriptor 1 %s", field.Desc.Kind())
 		}
@@ -134,7 +134,7 @@ func getFieldDescriptor(field *protogen.Field) (string, error) {
 		case MessageKind:
 			return fmt.Sprintf("fd(%d, .{ .SubMessage = {} }, %s)", field.Desc.Number(), typeName), nil
 		case EnumKind:
-			return fmt.Sprintf("fd(%d, .{ .Varint = .ZigZagOptimized }, %s)", field.Desc.Number(), typeName), nil
+			return fmt.Sprintf("fd(%d, .{ .Varint = .Simple }, %s)", field.Desc.Number(), typeName), nil
 		default:
 			return "", fmt.Errorf("unmanaged field type in  getFieldDescriptor 2 %s", field.Desc.Kind())
 		}

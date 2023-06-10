@@ -15,10 +15,10 @@ const fd = protobuf.fd;
 
 pub const Version = struct {
     pub const _desc_table = .{
-        .major = fd(1, .{ .List = .String }, []const u8),
-        .minor = fd(2, .{ .List = .String }, []const u8),
-        .patch = fd(3, .{ .List = .String }, []const u8),
-        .suffix = fd(4, .{ .List = .String }, []const u8),
+        .major = fd(1, .{ .Varint = .Simple }, i32),
+        .minor = fd(2, .{ .Varint = .Simple }, i32),
+        .patch = fd(3, .{ .Varint = .Simple }, i32),
+        .suffix = fd(4, .String, ?[]const u8),
     };
 
     pub fn encode(self: Version, allocator: Allocator) ![]u8 {
@@ -37,10 +37,10 @@ pub const Version = struct {
 
 pub const CodeGeneratorRequest = struct {
     pub const _desc_table = .{
-        .file_to_generate = fd(1, .{ .List = .String }, []const u8),
-        .parameter = fd(2, .{ .List = .String }, []const u8),
-        .proto_file = fd(15, .{ .List = .String }, []const u8),
-        .compiler_version = fd(3, .{ .List = .String }, []const u8),
+        .file_to_generate = fd(1, .{ .List = .String }, ArrayList([]const u8)),
+        .parameter = fd(2, .String, ?[]const u8),
+        .proto_file = fd(15, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.FileDescriptorProto)),
+        .compiler_version = fd(3, .{ .SubMessage = {} }, ?.google.protobuf.compiler.Version),
     };
 
     pub fn encode(self: CodeGeneratorRequest, allocator: Allocator) ![]u8 {
@@ -65,17 +65,17 @@ pub const CodeGeneratorResponse = struct {
     };
 
     pub const _desc_table = .{
-        .@"error" = fd(1, .{ .List = .String }, []const u8),
-        .supported_features = fd(2, .{ .List = .String }, []const u8),
-        .file = fd(15, .{ .List = .String }, []const u8),
+        .@"error" = fd(1, .String, ?[]const u8),
+        .supported_features = fd(2, .{ .Varint = .Simple }, u64),
+        .file = fd(15, .{ .List = .{ .SubMessage = {} } }, ArrayList(.google.protobuf.compiler.CodeGeneratorResponse.File)),
     };
 
     pub const File = struct {
         pub const _desc_table = .{
-            .name = fd(1, .{ .List = .String }, []const u8),
-            .insertion_point = fd(2, .{ .List = .String }, []const u8),
-            .content = fd(15, .{ .List = .String }, []const u8),
-            .generated_code_info = fd(16, .{ .List = .String }, []const u8),
+            .name = fd(1, .String, ?[]const u8),
+            .insertion_point = fd(2, .String, ?[]const u8),
+            .content = fd(15, .String, ?[]const u8),
+            .generated_code_info = fd(16, .{ .SubMessage = {} }, ?.google.protobuf.GeneratedCodeInfo),
         };
 
         pub fn encode(self: File, allocator: Allocator) ![]u8 {

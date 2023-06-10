@@ -82,6 +82,7 @@ fn generateEnums(list: *std.ArrayList([]const u8), ctx: plugin.CodeGeneratorRequ
 
     for (enums.items) |theEnum| {
         const e: descriptor.EnumDescriptorProto = theEnum;
+
         try list.append(try std.fmt.allocPrint(allocator, "\npub const {s} = enum(i32) {{\n", .{e.name orelse @panic("no enum name")}));
 
         for (e.value.items) |elem| {
@@ -109,8 +110,108 @@ fn getFieldName(field: descriptor.FieldDescriptorProto) ![]const u8 {
     return fieldName(field.name orelse @panic("no field name"));
 }
 
+fn fieldTypeFqn(field: descriptor.FieldDescriptorProto) ![]const u8 {
+    return field.type_name orelse @panic("fail");
+}
+
+fn isRepeated(field: descriptor.FieldDescriptorProto) bool {
+    if (field.label) |l| {
+        return l == .LABEL_REPEATED;
+    } else {
+        return false;
+    }
+}
+
+fn isPacked(field: descriptor.FieldDescriptorProto) bool {
+    if (field.options) |o| {
+        return o.@"packed" orelse false;
+    } else {
+        return false;
+    }
+}
+
+fn isOptional(field: descriptor.FieldDescriptorProto) bool {
+    if (field.label) |l| {
+        return l == .LABEL_OPTIONAL;
+    } else {
+        return false;
+    }
+}
+
+fn getFieldType(field: descriptor.FieldDescriptorProto) ![]const u8 {
+    var prefix: []const u8 = "";
+
+    var postfix: []const u8 = "";
+
+    const repated = isRepeated(field);
+
+    const t = field.type orelse @panic("Field without type");
+
+    if (!repated) {
+        // look for optional types
+        switch (t) {
+            .TYPE_MESSAGE, .TYPE_STRING, .TYPE_BYTES => prefix = "?",
+            else => {},
+        }
+    } else {
+        prefix = "ArrayList(";
+        postfix = ")";
+    }
+
+    const infix: []const u8 = switch (t) {
+        .TYPE_SINT32, .TYPE_SFIXED32, .TYPE_INT32 => "i32",
+        .TYPE_UINT32, .TYPE_FIXED32 => "u32",
+        .TYPE_INT64, .TYPE_SINT64, .TYPE_SFIXED64 => "i64",
+        .TYPE_UINT64, .TYPE_FIXED64 => "u64",
+        .TYPE_BOOL => "bool",
+        .TYPE_DOUBLE => "f64",
+        .TYPE_FLOAT => "f32",
+        .TYPE_STRING, .TYPE_BYTES => "[]const u8",
+        .TYPE_ENUM, .TYPE_MESSAGE => try fieldTypeFqn(field),
+        else => {
+            std.debug.print("Unrecognized type {}\n", .{t});
+            @panic("Unrecognized type");
+        },
+    };
+
+    return try std.mem.concatWithSentinel(allocator, u8, &.{ prefix, infix, postfix }, 0);
+}
+
+fn getFieldTypeDescriptor(field: descriptor.FieldDescriptorProto) ![]const u8 {
+    var prefix: []const u8 = "";
+
+    var postfix: []const u8 = "";
+
+    if (isRepeated(field)) {
+        if (isPacked(field)) {
+            prefix = ".{ .PackedList = ";
+        } else {
+            prefix = ".{ .List = ";
+        }
+        postfix = "}";
+    }
+
+    const t = field.type orelse @panic("Field without type");
+
+    const infix: []const u8 = switch (t) {
+        .TYPE_DOUBLE, .TYPE_FLOAT, .TYPE_SFIXED32, .TYPE_FIXED32, .TYPE_SFIXED64, .TYPE_FIXED64 => ".FixedInt",
+        .TYPE_ENUM, .TYPE_UINT32, .TYPE_UINT64, .TYPE_BOOL, .TYPE_INT32, .TYPE_INT64 => ".{ .Varint = .Simple }",
+        .TYPE_SINT32, .TYPE_SINT64 => ".{ .Varint = .ZigZagOptimized }",
+        .TYPE_STRING, .TYPE_BYTES => ".String",
+        .TYPE_MESSAGE => ".{ .SubMessage = {} }",
+        else => {
+            std.debug.print("Unrecognized type {}\n", .{t});
+            @panic("Unrecognized type");
+        },
+    };
+
+    return try std.mem.concatWithSentinel(allocator, u8, &.{ prefix, infix, postfix }, 0);
+}
+
 fn getFieldDescriptor(field: descriptor.FieldDescriptorProto) ![]const u8 {
-    return std.fmt.allocPrint(allocator, "fd({?d}, .{{ .List = .String }}, []const u8)", .{field.number});
+    var typeStr = try getFieldType(field);
+    var descStr = try getFieldTypeDescriptor(field);
+    return std.fmt.allocPrint(allocator, "fd({?d}, {s}, {s})", .{ field.number, descStr, typeStr });
 }
 
 fn generateFieldDescriptor(list: *std.ArrayList([]const u8), ctx: plugin.CodeGeneratorRequest, file: descriptor.FileDescriptorProto, messages: std.ArrayList(descriptor.DescriptorProto), field: descriptor.FieldDescriptorProto) !void {

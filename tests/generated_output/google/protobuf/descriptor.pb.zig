@@ -272,7 +272,7 @@ pub const ExtensionRangeOptions = struct {
     pub const _desc_table = .{
         .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
         .declaration = fd(2, .{ .List = .SubMessage }, ArrayList(Declaration)),
-        .verification = fd(3, .{ .Varint = .ZigZagOptimized }, ?VerificationState),
+        .verification = fd(3, .{ .Varint = .Simple }, ?VerificationState),
     };
 
     pub fn encode(self: ExtensionRangeOptions, allocator: Allocator) ![]u8 {
@@ -389,8 +389,8 @@ pub const FieldDescriptorProto = struct {
     pub const _desc_table = .{
         .name = fd(1, .String, ?[]const u8),
         .number = fd(3, .{ .Varint = .Simple }, ?i32),
-        .label = fd(4, .{ .Varint = .ZigZagOptimized }, ?Label),
-        .type = fd(5, .{ .Varint = .ZigZagOptimized }, ?Type),
+        .label = fd(4, .{ .Varint = .Simple }, ?Label),
+        .type = fd(5, .{ .Varint = .Simple }, ?Type),
         .type_name = fd(6, .String, ?[]const u8),
         .extendee = fd(2, .String, ?[]const u8),
         .default_value = fd(7, .String, ?[]const u8),
@@ -710,7 +710,7 @@ pub const FileOptions = struct {
         .java_multiple_files = fd(10, .{ .Varint = .Simple }, ?bool),
         .java_generate_equals_and_hash = fd(20, .{ .Varint = .Simple }, ?bool),
         .java_string_check_utf8 = fd(27, .{ .Varint = .Simple }, ?bool),
-        .optimize_for = fd(9, .{ .Varint = .ZigZagOptimized }, ?OptimizeMode),
+        .optimize_for = fd(9, .{ .Varint = .Simple }, ?OptimizeMode),
         .go_package = fd(11, .String, ?[]const u8),
         .cc_generic_services = fd(16, .{ .Varint = .Simple }, ?bool),
         .java_generic_services = fd(17, .{ .Varint = .Simple }, ?bool),
@@ -965,17 +965,17 @@ pub const FieldOptions = struct {
     };
 
     pub const _desc_table = .{
-        .ctype = fd(1, .{ .Varint = .ZigZagOptimized }, ?CType),
+        .ctype = fd(1, .{ .Varint = .Simple }, ?CType),
         .@"packed" = fd(2, .{ .Varint = .Simple }, ?bool),
-        .jstype = fd(6, .{ .Varint = .ZigZagOptimized }, ?JSType),
+        .jstype = fd(6, .{ .Varint = .Simple }, ?JSType),
         .lazy = fd(5, .{ .Varint = .Simple }, ?bool),
         .unverified_lazy = fd(15, .{ .Varint = .Simple }, ?bool),
         .deprecated = fd(3, .{ .Varint = .Simple }, ?bool),
         .weak = fd(10, .{ .Varint = .Simple }, ?bool),
         .debug_redact = fd(16, .{ .Varint = .Simple }, ?bool),
-        .retention = fd(17, .{ .Varint = .ZigZagOptimized }, ?OptionRetention),
-        .target = fd(18, .{ .Varint = .ZigZagOptimized }, ?OptionTargetType),
-        .targets = fd(19, .{ .List = .{ .Varint = .ZigZagOptimized } }, ArrayList(OptionTargetType)),
+        .retention = fd(17, .{ .Varint = .Simple }, ?OptionRetention),
+        .target = fd(18, .{ .Varint = .Simple }, ?OptionTargetType),
+        .targets = fd(19, .{ .List = .{ .Varint = .Simple } }, ArrayList(OptionTargetType)),
         .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
@@ -1147,7 +1147,7 @@ pub const MethodOptions = struct {
 
     pub const _desc_table = .{
         .deprecated = fd(33, .{ .Varint = .Simple }, ?bool),
-        .idempotency_level = fd(34, .{ .Varint = .ZigZagOptimized }, ?IdempotencyLevel),
+        .idempotency_level = fd(34, .{ .Varint = .Simple }, ?IdempotencyLevel),
         .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
@@ -1455,7 +1455,7 @@ pub const GeneratedCodeInfo = struct {
             .source_file = fd(2, .String, ?[]const u8),
             .begin = fd(3, .{ .Varint = .Simple }, ?i32),
             .end = fd(4, .{ .Varint = .Simple }, ?i32),
-            .semantic = fd(5, .{ .Varint = .ZigZagOptimized }, ?Semantic),
+            .semantic = fd(5, .{ .Varint = .Simple }, ?Semantic),
         };
 
         pub fn encode(self: Annotation, allocator: Allocator) ![]u8 {
