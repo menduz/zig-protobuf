@@ -12,7 +12,6 @@ jobs:
         with:
           version: master
       - run: zig build test
-        continue-on-error: true
 
   lint:
     runs-on: ubuntu-latest
