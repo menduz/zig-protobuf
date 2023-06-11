@@ -45,12 +45,7 @@ pub fn build(b: *std.build.Builder) void {
     // step when running `zig build`).
     b.installArtifact(exe);
 
-    // gen_tests generates the code for tests using the generator
-    const gen_tests = b.addSystemCommand(&[_][]const u8{ "bash", "generate-tests.sh" });
-    gen_tests.step.dependOn(&exe.step);
-
     const test_step = b.step("test", "Run library tests");
-    test_step.dependOn(&gen_tests.step);
 
     var tests = [_]*std.build.LibExeObjStep{
         b.addTest(.{
