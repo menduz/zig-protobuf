@@ -24,7 +24,7 @@ pub fn printAllDecoded(input: []const u8) !void {
 const Demo1 = struct {
     a: ?u32,
 
-    pub const _desc_table = .{ .a = fd(1, FieldType{ .Varint = .Simple }, ?u32) };
+    pub const _desc_table = .{ .a = fd(1, .{ .Varint = .Simple }) };
 
     pub fn encode(self: Demo1, allocator: Allocator) ![]u8 {
         return pb_encode(self, allocator);
@@ -69,8 +69,8 @@ const Demo2 = struct {
     b: ?u32,
 
     pub const _desc_table = .{
-        .a = fd(1, .{ .Varint = .Simple }, ?u32),
-        .b = fd(2, .{ .Varint = .Simple }, ?u32),
+        .a = fd(1, .{ .Varint = .Simple }),
+        .b = fd(2, .{ .Varint = .Simple }),
     };
 
     pub fn encode(self: Demo2, allocator: Allocator) ![]u8 {
@@ -101,8 +101,8 @@ const WithNegativeIntegers = struct {
     b: ?i32, // sint32
 
     pub const _desc_table = .{
-        .a = fd(1, .{ .Varint = .ZigZagOptimized }, ?i32),
-        .b = fd(2, .{ .Varint = .Simple }, ?i32),
+        .a = fd(1, .{ .Varint = .ZigZagOptimized }),
+        .b = fd(2, .{ .Varint = .Simple }),
     };
 
     pub fn encode(self: WithNegativeIntegers, allocator: Allocator) ![]u8 {
@@ -144,16 +144,16 @@ const DemoWithAllVarint = struct {
     neg_int64: ?i64,
 
     pub const _desc_table = .{
-        .sint32 = fd(1, .{ .Varint = .ZigZagOptimized }, ?i32),
-        .sint64 = fd(2, .{ .Varint = .ZigZagOptimized }, ?i64),
-        .uint32 = fd(3, .{ .Varint = .Simple }, ?u32),
-        .uint64 = fd(4, .{ .Varint = .Simple }, ?u64),
-        .a_bool = fd(5, .{ .Varint = .Simple }, ?bool),
-        .a_enum = fd(6, .{ .Varint = .Simple }, ?DemoEnum),
-        .pos_int32 = fd(7, .{ .Varint = .Simple }, ?i32),
-        .pos_int64 = fd(8, .{ .Varint = .Simple }, ?i64),
-        .neg_int32 = fd(9, .{ .Varint = .Simple }, ?i32),
-        .neg_int64 = fd(10, .{ .Varint = .Simple }, ?i64),
+        .sint32 = fd(1, .{ .Varint = .ZigZagOptimized }),
+        .sint64 = fd(2, .{ .Varint = .ZigZagOptimized }),
+        .uint32 = fd(3, .{ .Varint = .Simple }),
+        .uint64 = fd(4, .{ .Varint = .Simple }),
+        .a_bool = fd(5, .{ .Varint = .Simple }),
+        .a_enum = fd(6, .{ .Varint = .Simple }),
+        .pos_int32 = fd(7, .{ .Varint = .Simple }),
+        .pos_int64 = fd(8, .{ .Varint = .Simple }),
+        .neg_int32 = fd(9, .{ .Varint = .Simple }),
+        .neg_int64 = fd(10, .{ .Varint = .Simple }),
     };
 
     pub fn encode(self: DemoWithAllVarint, allocator: Allocator) ![]u8 {
@@ -185,8 +185,8 @@ const WithSubmessages = struct {
     sub_demo2: ?Demo2,
 
     pub const _desc_table = .{
-        .sub_demo1 = fd(1, .SubMessage, ?Demo1),
-        .sub_demo2 = fd(2, .SubMessage, ?Demo2),
+        .sub_demo1 = fd(1, .SubMessage),
+        .sub_demo2 = fd(2, .SubMessage),
     };
 
     pub fn encode(self: WithSubmessages, allocator: Allocator) ![]u8 {
@@ -222,7 +222,7 @@ const WithBytes = struct {
     list_of_data: ArrayList(u32),
 
     pub const _desc_table = .{
-        .list_of_data = fd(1, .{ .List = .{ .Varint = .Simple } }, ArrayList(u32)),
+        .list_of_data = fd(1, .{ .List = .{ .Varint = .Simple } }),
     };
 
     pub fn encode(self: WithBytes, allocator: Allocator) ![]u8 {
@@ -286,7 +286,7 @@ const FixedSizesList = struct {
     fixed32List: ArrayList(u32),
 
     pub const _desc_table = .{
-        .fixed32List = fd(1, .{ .List = .{ .FixedInt = .I32 } }, ArrayList(u32)),
+        .fixed32List = fd(1, .{ .List = .{ .FixedInt = .I32 } }),
     };
 
     pub fn encode(self: FixedSizesList, allocator: Allocator) ![]u8 {
@@ -334,7 +334,7 @@ const VarintList = struct {
     varuint32List: ArrayList(u32),
 
     pub const _desc_table = .{
-        .varuint32List = fd(1, .{ .List = .{ .Varint = .Simple } }, ArrayList(u32)),
+        .varuint32List = fd(1, .{ .List = .{ .Varint = .Simple } }),
     };
 
     pub fn encode(self: VarintList, allocator: Allocator) ![]u8 {
@@ -381,7 +381,7 @@ const SubMessageList = struct {
     subMessageList: ArrayList(Demo1),
 
     pub const _desc_table = .{
-        .subMessageList = fd(1, .{ .List = .SubMessage }, ArrayList(Demo1)),
+        .subMessageList = fd(1, .{ .List = .SubMessage }),
     };
 
     pub fn encode(self: SubMessageList, allocator: Allocator) ![]u8 {
@@ -442,8 +442,8 @@ const EmptyLists = struct {
     varuint32Empty: ArrayList(u32),
 
     pub const _desc_table = .{
-        .varuint32List = fd(1, .{ .List = .{ .Varint = .Simple } }, ArrayList(u32)),
-        .varuint32Empty = fd(2, .{ .List = .{ .Varint = .Simple } }, ArrayList(u32)),
+        .varuint32List = fd(1, .{ .List = .{ .Varint = .Simple } }),
+        .varuint32Empty = fd(2, .{ .List = .{ .Varint = .Simple } }),
     };
 
     pub fn encode(self: EmptyLists, allocator: Allocator) ![]u8 {
@@ -523,10 +523,10 @@ const DefaultValuesInit = struct {
     d: ?u32,
 
     pub const _desc_table = .{
-        .a = fd(1, .{ .Varint = .Simple }, ?u32),
-        .b = fd(2, .{ .Varint = .Simple }, ?u32),
-        .c = fd(3, .{ .Varint = .Simple }, ?u32),
-        .d = fd(4, .{ .Varint = .Simple }, ?u32),
+        .a = fd(1, .{ .Varint = .Simple }),
+        .b = fd(2, .{ .Varint = .Simple }),
+        .c = fd(3, .{ .Varint = .Simple }),
+        .d = fd(4, .{ .Varint = .Simple }),
     };
 
     pub fn encode(self: DefaultValuesInit, allocator: Allocator) ![]u8 {

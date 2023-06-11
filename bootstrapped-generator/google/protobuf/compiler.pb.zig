@@ -21,10 +21,10 @@ pub const Version = struct {
     suffix: ?[]const u8,
 
     pub const _desc_table = .{
-        .major = fd(1, .{ .Varint = .Simple }, ?i32),
-        .minor = fd(2, .{ .Varint = .Simple }, ?i32),
-        .patch = fd(3, .{ .Varint = .Simple }, ?i32),
-        .suffix = fd(4, .String, ?[]const u8),
+        .major = fd(1, .{ .Varint = .Simple }),
+        .minor = fd(2, .{ .Varint = .Simple }),
+        .patch = fd(3, .{ .Varint = .Simple }),
+        .suffix = fd(4, .String),
     };
 
     pub fn encode(self: Version, allocator: Allocator) ![]u8 {
@@ -48,10 +48,10 @@ pub const CodeGeneratorRequest = struct {
     compiler_version: ?Version,
 
     pub const _desc_table = .{
-        .file_to_generate = fd(1, .{ .List = .String }, ArrayList([]const u8)),
-        .parameter = fd(2, .String, ?[]const u8),
-        .proto_file = fd(15, .{ .List = .{ .SubMessage = {} } }, ArrayList(google_protobuf.FileDescriptorProto)),
-        .compiler_version = fd(3, .{ .SubMessage = {} }, ?Version),
+        .file_to_generate = fd(1, .{ .List = .String }),
+        .parameter = fd(2, .String),
+        .proto_file = fd(15, .{ .List = .{ .SubMessage = {} } }),
+        .compiler_version = fd(3, .{ .SubMessage = {} }),
     };
 
     pub fn encode(self: CodeGeneratorRequest, allocator: Allocator) ![]u8 {
@@ -74,9 +74,9 @@ pub const CodeGeneratorResponse = struct {
     file: ArrayList(File),
 
     pub const _desc_table = .{
-        .@"error" = fd(1, .String, ?[]const u8),
-        .supported_features = fd(2, .{ .Varint = .Simple }, ?u64),
-        .file = fd(15, .{ .List = .{ .SubMessage = {} } }, ArrayList(File)),
+        .@"error" = fd(1, .String),
+        .supported_features = fd(2, .{ .Varint = .Simple }),
+        .file = fd(15, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub const Feature = enum(i32) {
@@ -92,10 +92,10 @@ pub const CodeGeneratorResponse = struct {
         generated_code_info: ?google_protobuf.GeneratedCodeInfo,
 
         pub const _desc_table = .{
-            .name = fd(1, .String, ?[]const u8),
-            .insertion_point = fd(2, .String, ?[]const u8),
-            .content = fd(15, .String, ?[]const u8),
-            .generated_code_info = fd(16, .{ .SubMessage = {} }, ?google_protobuf.GeneratedCodeInfo),
+            .name = fd(1, .String),
+            .insertion_point = fd(2, .String),
+            .content = fd(15, .String),
+            .generated_code_info = fd(16, .{ .SubMessage = {} }),
         };
 
         pub fn encode(self: File, allocator: Allocator) ![]u8 {

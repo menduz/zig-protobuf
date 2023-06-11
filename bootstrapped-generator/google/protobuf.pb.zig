@@ -16,7 +16,7 @@ pub const FileDescriptorSet = struct {
     file: ArrayList(FileDescriptorProto),
 
     pub const _desc_table = .{
-        .file = fd(1, .{ .List = .{ .SubMessage = {} } }, ArrayList(FileDescriptorProto)),
+        .file = fd(1, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub fn encode(self: FileDescriptorSet, allocator: Allocator) ![]u8 {
@@ -49,19 +49,19 @@ pub const FileDescriptorProto = struct {
     edition: ?[]const u8,
 
     pub const _desc_table = .{
-        .name = fd(1, .String, ?[]const u8),
-        .package = fd(2, .String, ?[]const u8),
-        .dependency = fd(3, .{ .List = .String }, ArrayList([]const u8)),
-        .public_dependency = fd(10, .{ .List = .{ .Varint = .Simple } }, ArrayList(i32)),
-        .weak_dependency = fd(11, .{ .List = .{ .Varint = .Simple } }, ArrayList(i32)),
-        .message_type = fd(4, .{ .List = .{ .SubMessage = {} } }, ArrayList(DescriptorProto)),
-        .enum_type = fd(5, .{ .List = .{ .SubMessage = {} } }, ArrayList(EnumDescriptorProto)),
-        .service = fd(6, .{ .List = .{ .SubMessage = {} } }, ArrayList(ServiceDescriptorProto)),
-        .extension = fd(7, .{ .List = .{ .SubMessage = {} } }, ArrayList(FieldDescriptorProto)),
-        .options = fd(8, .{ .SubMessage = {} }, ?FileOptions),
-        .source_code_info = fd(9, .{ .SubMessage = {} }, ?SourceCodeInfo),
-        .syntax = fd(12, .String, ?[]const u8),
-        .edition = fd(13, .String, ?[]const u8),
+        .name = fd(1, .String),
+        .package = fd(2, .String),
+        .dependency = fd(3, .{ .List = .String }),
+        .public_dependency = fd(10, .{ .List = .{ .Varint = .Simple } }),
+        .weak_dependency = fd(11, .{ .List = .{ .Varint = .Simple } }),
+        .message_type = fd(4, .{ .List = .{ .SubMessage = {} } }),
+        .enum_type = fd(5, .{ .List = .{ .SubMessage = {} } }),
+        .service = fd(6, .{ .List = .{ .SubMessage = {} } }),
+        .extension = fd(7, .{ .List = .{ .SubMessage = {} } }),
+        .options = fd(8, .{ .SubMessage = {} }),
+        .source_code_info = fd(9, .{ .SubMessage = {} }),
+        .syntax = fd(12, .String),
+        .edition = fd(13, .String),
     };
 
     pub fn encode(self: FileDescriptorProto, allocator: Allocator) ![]u8 {
@@ -91,16 +91,16 @@ pub const DescriptorProto = struct {
     reserved_name: ArrayList([]const u8),
 
     pub const _desc_table = .{
-        .name = fd(1, .String, ?[]const u8),
-        .field = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(FieldDescriptorProto)),
-        .extension = fd(6, .{ .List = .{ .SubMessage = {} } }, ArrayList(FieldDescriptorProto)),
-        .nested_type = fd(3, .{ .List = .{ .SubMessage = {} } }, ArrayList(DescriptorProto)),
-        .enum_type = fd(4, .{ .List = .{ .SubMessage = {} } }, ArrayList(EnumDescriptorProto)),
-        .extension_range = fd(5, .{ .List = .{ .SubMessage = {} } }, ArrayList(ExtensionRange)),
-        .oneof_decl = fd(8, .{ .List = .{ .SubMessage = {} } }, ArrayList(OneofDescriptorProto)),
-        .options = fd(7, .{ .SubMessage = {} }, ?MessageOptions),
-        .reserved_range = fd(9, .{ .List = .{ .SubMessage = {} } }, ArrayList(ReservedRange)),
-        .reserved_name = fd(10, .{ .List = .String }, ArrayList([]const u8)),
+        .name = fd(1, .String),
+        .field = fd(2, .{ .List = .{ .SubMessage = {} } }),
+        .extension = fd(6, .{ .List = .{ .SubMessage = {} } }),
+        .nested_type = fd(3, .{ .List = .{ .SubMessage = {} } }),
+        .enum_type = fd(4, .{ .List = .{ .SubMessage = {} } }),
+        .extension_range = fd(5, .{ .List = .{ .SubMessage = {} } }),
+        .oneof_decl = fd(8, .{ .List = .{ .SubMessage = {} } }),
+        .options = fd(7, .{ .SubMessage = {} }),
+        .reserved_range = fd(9, .{ .List = .{ .SubMessage = {} } }),
+        .reserved_name = fd(10, .{ .List = .String }),
     };
 
     pub const ExtensionRange = struct {
@@ -109,9 +109,9 @@ pub const DescriptorProto = struct {
         options: ?ExtensionRangeOptions,
 
         pub const _desc_table = .{
-            .start = fd(1, .{ .Varint = .Simple }, ?i32),
-            .end = fd(2, .{ .Varint = .Simple }, ?i32),
-            .options = fd(3, .{ .SubMessage = {} }, ?ExtensionRangeOptions),
+            .start = fd(1, .{ .Varint = .Simple }),
+            .end = fd(2, .{ .Varint = .Simple }),
+            .options = fd(3, .{ .SubMessage = {} }),
         };
 
         pub fn encode(self: ExtensionRange, allocator: Allocator) ![]u8 {
@@ -133,8 +133,8 @@ pub const DescriptorProto = struct {
         end: ?i32,
 
         pub const _desc_table = .{
-            .start = fd(1, .{ .Varint = .Simple }, ?i32),
-            .end = fd(2, .{ .Varint = .Simple }, ?i32),
+            .start = fd(1, .{ .Varint = .Simple }),
+            .end = fd(2, .{ .Varint = .Simple }),
         };
 
         pub fn encode(self: ReservedRange, allocator: Allocator) ![]u8 {
@@ -171,9 +171,9 @@ pub const ExtensionRangeOptions = struct {
     verification: ?VerificationState,
 
     pub const _desc_table = .{
-        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(UninterpretedOption)),
-        .declaration = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(Declaration)),
-        .verification = fd(3, .{ .Varint = .Simple }, ?VerificationState),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }),
+        .declaration = fd(2, .{ .List = .{ .SubMessage = {} } }),
+        .verification = fd(3, .{ .Varint = .Simple }),
     };
 
     pub const VerificationState = enum(i32) {
@@ -191,12 +191,12 @@ pub const ExtensionRangeOptions = struct {
         repeated: ?bool,
 
         pub const _desc_table = .{
-            .number = fd(1, .{ .Varint = .Simple }, ?i32),
-            .full_name = fd(2, .String, ?[]const u8),
-            .type = fd(3, .String, ?[]const u8),
-            .is_repeated = fd(4, .{ .Varint = .Simple }, ?bool),
-            .reserved = fd(5, .{ .Varint = .Simple }, ?bool),
-            .repeated = fd(6, .{ .Varint = .Simple }, ?bool),
+            .number = fd(1, .{ .Varint = .Simple }),
+            .full_name = fd(2, .String),
+            .type = fd(3, .String),
+            .is_repeated = fd(4, .{ .Varint = .Simple }),
+            .reserved = fd(5, .{ .Varint = .Simple }),
+            .repeated = fd(6, .{ .Varint = .Simple }),
         };
 
         pub fn encode(self: Declaration, allocator: Allocator) ![]u8 {
@@ -241,17 +241,17 @@ pub const FieldDescriptorProto = struct {
     proto3_optional: ?bool,
 
     pub const _desc_table = .{
-        .name = fd(1, .String, ?[]const u8),
-        .number = fd(3, .{ .Varint = .Simple }, ?i32),
-        .label = fd(4, .{ .Varint = .Simple }, ?Label),
-        .type = fd(5, .{ .Varint = .Simple }, ?Type),
-        .type_name = fd(6, .String, ?[]const u8),
-        .extendee = fd(2, .String, ?[]const u8),
-        .default_value = fd(7, .String, ?[]const u8),
-        .oneof_index = fd(9, .{ .Varint = .Simple }, ?i32),
-        .json_name = fd(10, .String, ?[]const u8),
-        .options = fd(8, .{ .SubMessage = {} }, ?FieldOptions),
-        .proto3_optional = fd(17, .{ .Varint = .Simple }, ?bool),
+        .name = fd(1, .String),
+        .number = fd(3, .{ .Varint = .Simple }),
+        .label = fd(4, .{ .Varint = .Simple }),
+        .type = fd(5, .{ .Varint = .Simple }),
+        .type_name = fd(6, .String),
+        .extendee = fd(2, .String),
+        .default_value = fd(7, .String),
+        .oneof_index = fd(9, .{ .Varint = .Simple }),
+        .json_name = fd(10, .String),
+        .options = fd(8, .{ .SubMessage = {} }),
+        .proto3_optional = fd(17, .{ .Varint = .Simple }),
     };
 
     pub const Type = enum(i32) {
@@ -302,8 +302,8 @@ pub const OneofDescriptorProto = struct {
     options: ?OneofOptions,
 
     pub const _desc_table = .{
-        .name = fd(1, .String, ?[]const u8),
-        .options = fd(2, .{ .SubMessage = {} }, ?OneofOptions),
+        .name = fd(1, .String),
+        .options = fd(2, .{ .SubMessage = {} }),
     };
 
     pub fn encode(self: OneofDescriptorProto, allocator: Allocator) ![]u8 {
@@ -328,11 +328,11 @@ pub const EnumDescriptorProto = struct {
     reserved_name: ArrayList([]const u8),
 
     pub const _desc_table = .{
-        .name = fd(1, .String, ?[]const u8),
-        .value = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(EnumValueDescriptorProto)),
-        .options = fd(3, .{ .SubMessage = {} }, ?EnumOptions),
-        .reserved_range = fd(4, .{ .List = .{ .SubMessage = {} } }, ArrayList(EnumReservedRange)),
-        .reserved_name = fd(5, .{ .List = .String }, ArrayList([]const u8)),
+        .name = fd(1, .String),
+        .value = fd(2, .{ .List = .{ .SubMessage = {} } }),
+        .options = fd(3, .{ .SubMessage = {} }),
+        .reserved_range = fd(4, .{ .List = .{ .SubMessage = {} } }),
+        .reserved_name = fd(5, .{ .List = .String }),
     };
 
     pub const EnumReservedRange = struct {
@@ -340,8 +340,8 @@ pub const EnumDescriptorProto = struct {
         end: ?i32,
 
         pub const _desc_table = .{
-            .start = fd(1, .{ .Varint = .Simple }, ?i32),
-            .end = fd(2, .{ .Varint = .Simple }, ?i32),
+            .start = fd(1, .{ .Varint = .Simple }),
+            .end = fd(2, .{ .Varint = .Simple }),
         };
 
         pub fn encode(self: EnumReservedRange, allocator: Allocator) ![]u8 {
@@ -378,9 +378,9 @@ pub const EnumValueDescriptorProto = struct {
     options: ?EnumValueOptions,
 
     pub const _desc_table = .{
-        .name = fd(1, .String, ?[]const u8),
-        .number = fd(2, .{ .Varint = .Simple }, ?i32),
-        .options = fd(3, .{ .SubMessage = {} }, ?EnumValueOptions),
+        .name = fd(1, .String),
+        .number = fd(2, .{ .Varint = .Simple }),
+        .options = fd(3, .{ .SubMessage = {} }),
     };
 
     pub fn encode(self: EnumValueDescriptorProto, allocator: Allocator) ![]u8 {
@@ -403,9 +403,9 @@ pub const ServiceDescriptorProto = struct {
     options: ?ServiceOptions,
 
     pub const _desc_table = .{
-        .name = fd(1, .String, ?[]const u8),
-        .method = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(MethodDescriptorProto)),
-        .options = fd(3, .{ .SubMessage = {} }, ?ServiceOptions),
+        .name = fd(1, .String),
+        .method = fd(2, .{ .List = .{ .SubMessage = {} } }),
+        .options = fd(3, .{ .SubMessage = {} }),
     };
 
     pub fn encode(self: ServiceDescriptorProto, allocator: Allocator) ![]u8 {
@@ -431,12 +431,12 @@ pub const MethodDescriptorProto = struct {
     server_streaming: ?bool,
 
     pub const _desc_table = .{
-        .name = fd(1, .String, ?[]const u8),
-        .input_type = fd(2, .String, ?[]const u8),
-        .output_type = fd(3, .String, ?[]const u8),
-        .options = fd(4, .{ .SubMessage = {} }, ?MethodOptions),
-        .client_streaming = fd(5, .{ .Varint = .Simple }, ?bool),
-        .server_streaming = fd(6, .{ .Varint = .Simple }, ?bool),
+        .name = fd(1, .String),
+        .input_type = fd(2, .String),
+        .output_type = fd(3, .String),
+        .options = fd(4, .{ .SubMessage = {} }),
+        .client_streaming = fd(5, .{ .Varint = .Simple }),
+        .server_streaming = fd(6, .{ .Varint = .Simple }),
     };
 
     pub fn encode(self: MethodDescriptorProto, allocator: Allocator) ![]u8 {
@@ -477,27 +477,27 @@ pub const FileOptions = struct {
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .java_package = fd(1, .String, ?[]const u8),
-        .java_outer_classname = fd(8, .String, ?[]const u8),
-        .java_multiple_files = fd(10, .{ .Varint = .Simple }, ?bool),
-        .java_generate_equals_and_hash = fd(20, .{ .Varint = .Simple }, ?bool),
-        .java_string_check_utf8 = fd(27, .{ .Varint = .Simple }, ?bool),
-        .optimize_for = fd(9, .{ .Varint = .Simple }, ?OptimizeMode),
-        .go_package = fd(11, .String, ?[]const u8),
-        .cc_generic_services = fd(16, .{ .Varint = .Simple }, ?bool),
-        .java_generic_services = fd(17, .{ .Varint = .Simple }, ?bool),
-        .py_generic_services = fd(18, .{ .Varint = .Simple }, ?bool),
-        .php_generic_services = fd(42, .{ .Varint = .Simple }, ?bool),
-        .deprecated = fd(23, .{ .Varint = .Simple }, ?bool),
-        .cc_enable_arenas = fd(31, .{ .Varint = .Simple }, ?bool),
-        .objc_class_prefix = fd(36, .String, ?[]const u8),
-        .csharp_namespace = fd(37, .String, ?[]const u8),
-        .swift_prefix = fd(39, .String, ?[]const u8),
-        .php_class_prefix = fd(40, .String, ?[]const u8),
-        .php_namespace = fd(41, .String, ?[]const u8),
-        .php_metadata_namespace = fd(44, .String, ?[]const u8),
-        .ruby_package = fd(45, .String, ?[]const u8),
-        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(UninterpretedOption)),
+        .java_package = fd(1, .String),
+        .java_outer_classname = fd(8, .String),
+        .java_multiple_files = fd(10, .{ .Varint = .Simple }),
+        .java_generate_equals_and_hash = fd(20, .{ .Varint = .Simple }),
+        .java_string_check_utf8 = fd(27, .{ .Varint = .Simple }),
+        .optimize_for = fd(9, .{ .Varint = .Simple }),
+        .go_package = fd(11, .String),
+        .cc_generic_services = fd(16, .{ .Varint = .Simple }),
+        .java_generic_services = fd(17, .{ .Varint = .Simple }),
+        .py_generic_services = fd(18, .{ .Varint = .Simple }),
+        .php_generic_services = fd(42, .{ .Varint = .Simple }),
+        .deprecated = fd(23, .{ .Varint = .Simple }),
+        .cc_enable_arenas = fd(31, .{ .Varint = .Simple }),
+        .objc_class_prefix = fd(36, .String),
+        .csharp_namespace = fd(37, .String),
+        .swift_prefix = fd(39, .String),
+        .php_class_prefix = fd(40, .String),
+        .php_namespace = fd(41, .String),
+        .php_metadata_namespace = fd(44, .String),
+        .ruby_package = fd(45, .String),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub const OptimizeMode = enum(i32) {
@@ -530,12 +530,12 @@ pub const MessageOptions = struct {
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .message_set_wire_format = fd(1, .{ .Varint = .Simple }, ?bool),
-        .no_standard_descriptor_accessor = fd(2, .{ .Varint = .Simple }, ?bool),
-        .deprecated = fd(3, .{ .Varint = .Simple }, ?bool),
-        .map_entry = fd(7, .{ .Varint = .Simple }, ?bool),
-        .deprecated_legacy_json_field_conflicts = fd(11, .{ .Varint = .Simple }, ?bool),
-        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(UninterpretedOption)),
+        .message_set_wire_format = fd(1, .{ .Varint = .Simple }),
+        .no_standard_descriptor_accessor = fd(2, .{ .Varint = .Simple }),
+        .deprecated = fd(3, .{ .Varint = .Simple }),
+        .map_entry = fd(7, .{ .Varint = .Simple }),
+        .deprecated_legacy_json_field_conflicts = fd(11, .{ .Varint = .Simple }),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub fn encode(self: MessageOptions, allocator: Allocator) ![]u8 {
@@ -567,18 +567,18 @@ pub const FieldOptions = struct {
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .ctype = fd(1, .{ .Varint = .Simple }, ?CType),
-        .@"packed" = fd(2, .{ .Varint = .Simple }, ?bool),
-        .jstype = fd(6, .{ .Varint = .Simple }, ?JSType),
-        .lazy = fd(5, .{ .Varint = .Simple }, ?bool),
-        .unverified_lazy = fd(15, .{ .Varint = .Simple }, ?bool),
-        .deprecated = fd(3, .{ .Varint = .Simple }, ?bool),
-        .weak = fd(10, .{ .Varint = .Simple }, ?bool),
-        .debug_redact = fd(16, .{ .Varint = .Simple }, ?bool),
-        .retention = fd(17, .{ .Varint = .Simple }, ?OptionRetention),
-        .target = fd(18, .{ .Varint = .Simple }, ?OptionTargetType),
-        .targets = fd(19, .{ .List = .{ .Varint = .Simple } }, ArrayList(OptionTargetType)),
-        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(UninterpretedOption)),
+        .ctype = fd(1, .{ .Varint = .Simple }),
+        .@"packed" = fd(2, .{ .Varint = .Simple }),
+        .jstype = fd(6, .{ .Varint = .Simple }),
+        .lazy = fd(5, .{ .Varint = .Simple }),
+        .unverified_lazy = fd(15, .{ .Varint = .Simple }),
+        .deprecated = fd(3, .{ .Varint = .Simple }),
+        .weak = fd(10, .{ .Varint = .Simple }),
+        .debug_redact = fd(16, .{ .Varint = .Simple }),
+        .retention = fd(17, .{ .Varint = .Simple }),
+        .target = fd(18, .{ .Varint = .Simple }),
+        .targets = fd(19, .{ .List = .{ .Varint = .Simple } }),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub const CType = enum(i32) {
@@ -634,7 +634,7 @@ pub const OneofOptions = struct {
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(UninterpretedOption)),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub fn encode(self: OneofOptions, allocator: Allocator) ![]u8 {
@@ -658,10 +658,10 @@ pub const EnumOptions = struct {
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .allow_alias = fd(2, .{ .Varint = .Simple }, ?bool),
-        .deprecated = fd(3, .{ .Varint = .Simple }, ?bool),
-        .deprecated_legacy_json_field_conflicts = fd(6, .{ .Varint = .Simple }, ?bool),
-        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(UninterpretedOption)),
+        .allow_alias = fd(2, .{ .Varint = .Simple }),
+        .deprecated = fd(3, .{ .Varint = .Simple }),
+        .deprecated_legacy_json_field_conflicts = fd(6, .{ .Varint = .Simple }),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub fn encode(self: EnumOptions, allocator: Allocator) ![]u8 {
@@ -683,8 +683,8 @@ pub const EnumValueOptions = struct {
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .deprecated = fd(1, .{ .Varint = .Simple }, ?bool),
-        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(UninterpretedOption)),
+        .deprecated = fd(1, .{ .Varint = .Simple }),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub fn encode(self: EnumValueOptions, allocator: Allocator) ![]u8 {
@@ -706,8 +706,8 @@ pub const ServiceOptions = struct {
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .deprecated = fd(33, .{ .Varint = .Simple }, ?bool),
-        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(UninterpretedOption)),
+        .deprecated = fd(33, .{ .Varint = .Simple }),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub fn encode(self: ServiceOptions, allocator: Allocator) ![]u8 {
@@ -730,9 +730,9 @@ pub const MethodOptions = struct {
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .deprecated = fd(33, .{ .Varint = .Simple }, ?bool),
-        .idempotency_level = fd(34, .{ .Varint = .Simple }, ?IdempotencyLevel),
-        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }, ArrayList(UninterpretedOption)),
+        .deprecated = fd(33, .{ .Varint = .Simple }),
+        .idempotency_level = fd(34, .{ .Varint = .Simple }),
+        .uninterpreted_option = fd(999, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub const IdempotencyLevel = enum(i32) {
@@ -766,13 +766,13 @@ pub const UninterpretedOption = struct {
     aggregate_value: ?[]const u8,
 
     pub const _desc_table = .{
-        .name = fd(2, .{ .List = .{ .SubMessage = {} } }, ArrayList(NamePart)),
-        .identifier_value = fd(3, .String, ?[]const u8),
-        .positive_int_value = fd(4, .{ .Varint = .Simple }, ?u64),
-        .negative_int_value = fd(5, .{ .Varint = .Simple }, ?i64),
-        .double_value = fd(6, .{ .FixedInt = .I64 }, ?f64),
-        .string_value = fd(7, .String, ?[]const u8),
-        .aggregate_value = fd(8, .String, ?[]const u8),
+        .name = fd(2, .{ .List = .{ .SubMessage = {} } }),
+        .identifier_value = fd(3, .String),
+        .positive_int_value = fd(4, .{ .Varint = .Simple }),
+        .negative_int_value = fd(5, .{ .Varint = .Simple }),
+        .double_value = fd(6, .{ .FixedInt = .I64 }),
+        .string_value = fd(7, .String),
+        .aggregate_value = fd(8, .String),
     };
 
     pub const NamePart = struct {
@@ -780,8 +780,8 @@ pub const UninterpretedOption = struct {
         is_extension: bool,
 
         pub const _desc_table = .{
-            .name_part = fd(1, .String, ?[]const u8),
-            .is_extension = fd(2, .{ .Varint = .Simple }, bool),
+            .name_part = fd(1, .String),
+            .is_extension = fd(2, .{ .Varint = .Simple }),
         };
 
         pub fn encode(self: NamePart, allocator: Allocator) ![]u8 {
@@ -816,7 +816,7 @@ pub const SourceCodeInfo = struct {
     location: ArrayList(Location),
 
     pub const _desc_table = .{
-        .location = fd(1, .{ .List = .{ .SubMessage = {} } }, ArrayList(Location)),
+        .location = fd(1, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub const Location = struct {
@@ -827,11 +827,11 @@ pub const SourceCodeInfo = struct {
         leading_detached_comments: ArrayList([]const u8),
 
         pub const _desc_table = .{
-            .path = fd(1, .{ .PackedList = .{ .Varint = .Simple } }, ArrayList(i32)),
-            .span = fd(2, .{ .PackedList = .{ .Varint = .Simple } }, ArrayList(i32)),
-            .leading_comments = fd(3, .String, ?[]const u8),
-            .trailing_comments = fd(4, .String, ?[]const u8),
-            .leading_detached_comments = fd(6, .{ .List = .String }, ArrayList([]const u8)),
+            .path = fd(1, .{ .PackedList = .{ .Varint = .Simple } }),
+            .span = fd(2, .{ .PackedList = .{ .Varint = .Simple } }),
+            .leading_comments = fd(3, .String),
+            .trailing_comments = fd(4, .String),
+            .leading_detached_comments = fd(6, .{ .List = .String }),
         };
 
         pub fn encode(self: Location, allocator: Allocator) ![]u8 {
@@ -866,7 +866,7 @@ pub const GeneratedCodeInfo = struct {
     annotation: ArrayList(Annotation),
 
     pub const _desc_table = .{
-        .annotation = fd(1, .{ .List = .{ .SubMessage = {} } }, ArrayList(Annotation)),
+        .annotation = fd(1, .{ .List = .{ .SubMessage = {} } }),
     };
 
     pub const Annotation = struct {
@@ -877,11 +877,11 @@ pub const GeneratedCodeInfo = struct {
         semantic: ?Semantic,
 
         pub const _desc_table = .{
-            .path = fd(1, .{ .PackedList = .{ .Varint = .Simple } }, ArrayList(i32)),
-            .source_file = fd(2, .String, ?[]const u8),
-            .begin = fd(3, .{ .Varint = .Simple }, ?i32),
-            .end = fd(4, .{ .Varint = .Simple }, ?i32),
-            .semantic = fd(5, .{ .Varint = .Simple }, ?Semantic),
+            .path = fd(1, .{ .PackedList = .{ .Varint = .Simple } }),
+            .source_file = fd(2, .String),
+            .begin = fd(3, .{ .Varint = .Simple }),
+            .end = fd(4, .{ .Varint = .Simple }),
+            .semantic = fd(5, .{ .Varint = .Simple }),
         };
 
         pub const Semantic = enum(i32) {

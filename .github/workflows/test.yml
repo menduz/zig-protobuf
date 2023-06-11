@@ -25,7 +25,7 @@ jobs:
           version: master
       - run: zig build
       - run: zig build test
-      - run: zig build bootstrap
+      - run: bash ./bootstrap.sh
       - run: zig build
       - run: bash ./generate-tests.sh
       - run: zig build test

@@ -101,12 +101,4 @@ pub fn build(b: *std.build.Builder) void {
         const run_main_tests = b.addRunArtifact(test_item);
         test_step.dependOn(&run_main_tests.step);
     }
-
-    const gen_bootstrap = b.addSystemCommand(&[_][]const u8{ "bash", "generate-tests.sh" });
-    gen_bootstrap.step.dependOn(&exe.step);
-
-    const bootstrap_step = b.step("bootstrap", "Generate the bootstrapping code");
-
-    bootstrap_step.dependOn(&exe.step);
-    bootstrap_step.dependOn(&gen_bootstrap.step);
 }

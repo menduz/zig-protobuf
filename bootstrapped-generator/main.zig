@@ -344,9 +344,8 @@ const GenerationContext = struct {
         _ = message;
         var name = try ctx.getFieldName(field);
         var descStr = try ctx.getFieldTypeDescriptor(fqn, file, field);
-        var typeStr = try ctx.getFieldType(fqn, file, field);
-        const format = "        .{s} = fd({?d}, {s}, {s}),\n";
-        try list.append(try std.fmt.allocPrint(allocator, format, .{ name, field.number, descStr, typeStr }));
+        const format = "        .{s} = fd({?d}, {s}),\n";
+        try list.append(try std.fmt.allocPrint(allocator, format, .{ name, field.number, descStr }));
     }
 
     fn generateFieldDeclaration(ctx: *Self, list: *std.ArrayList(string), fqn: FullName, file: descriptor.FileDescriptorProto, message: descriptor.DescriptorProto, field: descriptor.FieldDescriptorProto) !void {

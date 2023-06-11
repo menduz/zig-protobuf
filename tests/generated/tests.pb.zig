@@ -21,12 +21,12 @@ pub const FixedSizes = struct {
     float: ?f32,
 
     pub const _desc_table = .{
-        .sfixed64 = fd(1, .{ .FixedInt = .I64 }, ?i64),
-        .sfixed32 = fd(2, .{ .FixedInt = .I32 }, ?i32),
-        .fixed32 = fd(3, .{ .FixedInt = .I32 }, ?u32),
-        .fixed64 = fd(4, .{ .FixedInt = .I64 }, ?u64),
-        .double = fd(5, .{ .FixedInt = .I64 }, ?f64),
-        .float = fd(6, .{ .FixedInt = .I32 }, ?f32),
+        .sfixed64 = fd(1, .{ .FixedInt = .I64 }),
+        .sfixed32 = fd(2, .{ .FixedInt = .I32 }),
+        .fixed32 = fd(3, .{ .FixedInt = .I32 }),
+        .fixed64 = fd(4, .{ .FixedInt = .I64 }),
+        .double = fd(5, .{ .FixedInt = .I64 }),
+        .float = fd(6, .{ .FixedInt = .I32 }),
     };
 
     pub fn encode(self: FixedSizes, allocator: Allocator) ![]u8 {
@@ -51,11 +51,11 @@ pub const Varints = struct {
     a_bool: ?bool,
 
     pub const _desc_table = .{
-        .sint32 = fd(1, .{ .Varint = .ZigZagOptimized }, ?i32),
-        .sint64 = fd(2, .{ .Varint = .ZigZagOptimized }, ?i64),
-        .uint32 = fd(3, .{ .Varint = .Simple }, ?u32),
-        .uint64 = fd(4, .{ .Varint = .Simple }, ?u64),
-        .a_bool = fd(5, .{ .Varint = .Simple }, ?bool),
+        .sint32 = fd(1, .{ .Varint = .ZigZagOptimized }),
+        .sint64 = fd(2, .{ .Varint = .ZigZagOptimized }),
+        .uint32 = fd(3, .{ .Varint = .Simple }),
+        .uint64 = fd(4, .{ .Varint = .Simple }),
+        .a_bool = fd(5, .{ .Varint = .Simple }),
     };
 
     pub fn encode(self: Varints, allocator: Allocator) ![]u8 {

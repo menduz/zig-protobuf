@@ -123,7 +123,7 @@ pub const FieldDescriptor = struct {
 };
 
 /// Helper function to build a FieldDescriptor. Makes code clearer, mostly.
-pub fn fd(comptime fieldNumber: ?u32, comptime ftype: FieldType, comptime _: type) FieldDescriptor {
+pub fn fd(comptime fieldNumber: ?u32, comptime ftype: FieldType) FieldDescriptor {
     // calculates the comptime value of (tag_index << 3) + wire type.
     // This is fully calculated at comptime which is great.
     const tag: ?u32 = if (fieldNumber) |num| ((num << 3) | ftype.get_wirevalue()) else null;
@@ -298,7 +298,7 @@ fn MapSubmessage(comptime key_data: KeyValueTypeData, comptime value_data: KeyVa
         key: ?key_data.t,
         value: ?value_data.t,
 
-        pub const _desc_table = .{ .key = fd(1, key_data.pb_data.toFieldType(), ?key_data.t), .value = fd(2, value_data.pb_data.toFieldType(), ?value_data.t) };
+        pub const _desc_table = .{ .key = fd(1, key_data.pb_data.toFieldType()), .value = fd(2, value_data.pb_data.toFieldType()) };
 
         pub fn encode(self: Self, allocator: Allocator) ![]u8 {
             return pb_encode(self, allocator);
