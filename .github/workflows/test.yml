@@ -11,10 +11,19 @@ jobs:
       - name: install protoc
         run: sudo bash .devcontainer/install-protoc.sh
 
-      - uses: goto-bus-stop/setup-zig@v1
-        with:
-          version: master
+      - run: zig build
       - run: zig build test
+
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: install protoc
+        run: sudo bash .devcontainer/install-protoc.sh
+      - run: zig build
+      - run: zig build test
+      - run: zig build bootstrap
+      - run: zig build
 
   lint:
     runs-on: ubuntu-latest
