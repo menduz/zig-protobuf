@@ -13,6 +13,4 @@ protoc --plugin=zig-out/bin/protoc-gen-zig \
 zig fmt bootstrapped-generator/google/protobuf/compiler/plugin.pb.zig
 zig fmt bootstrapped-generator/google/protobuf/descriptor.pb.zig
 
-cp -r bootstrapped-generator/google tests/generated_output
-
 echo 'generation finished'
