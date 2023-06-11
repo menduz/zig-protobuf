@@ -13,6 +13,14 @@ const ArrayList = std.ArrayList;
 const AutoHashMap = std.AutoHashMap;
 const FieldType = protobuf.FieldType;
 
+pub fn printAllDecoded(input: []const u8) !void {
+    var iterator = protobuf.WireDecoderIterator{ .input = input };
+    std.debug.print("Decoding: {s}\n", .{std.fmt.fmtSliceHexUpper(input)});
+    while (try iterator.next()) |extracted_data| {
+        std.debug.print("  {any}\n", .{extracted_data});
+    }
+}
+
 const Demo1 = struct {
     a: ?u32,
 
@@ -211,10 +219,10 @@ test "WithSubmessages" {
 }
 
 const WithBytes = struct {
-    list_of_data: ArrayList(u8),
+    list_of_data: ArrayList(u32),
 
     pub const _desc_table = .{
-        .list_of_data = fd(1, .{ .List = .FixedInt }, ArrayList(u8)),
+        .list_of_data = fd(1, .{ .List = .{ .Varint = .Simple } }, ArrayList(u32)),
     };
 
     pub fn encode(self: WithBytes, allocator: Allocator) ![]u8 {
@@ -234,7 +242,7 @@ const WithBytes = struct {
     }
 };
 
-test "bytes" {
+test "FixedInt - not packed" {
     var demo = WithBytes.init(testing.allocator);
     try demo.list_of_data.append(0x08);
     try demo.list_of_data.append(0x01);
@@ -244,20 +252,41 @@ test "bytes" {
     defer testing.allocator.free(obtained);
 
     try testing.expectEqualSlices(u8, &[_]u8{
-        0x08 + 2, 0x02,
-        0x08,     0x01,
+        0x08, 0x08,
+        0x08, 0x01,
     }, obtained);
+
+    try printAllDecoded(obtained);
 
     const decoded = try WithBytes.decode(obtained, testing.allocator);
     defer decoded.deinit();
-    try testing.expectEqualSlices(u8, demo.list_of_data.items, decoded.list_of_data.items);
+    try testing.expectEqualSlices(u32, demo.list_of_data.items, decoded.list_of_data.items);
 }
+
+// test "bytes - packed" {
+//     var demo = WithBytes.init(testing.allocator);
+//     try demo.list_of_data.append(0x08);
+//     try demo.list_of_data.append(0x01);
+//     defer demo.deinit();
+
+//     const obtained = try demo.encode(testing.allocator);
+//     defer testing.allocator.free(obtained);
+
+//     try testing.expectEqualSlices(u8, &[_]u8{
+//         0x08 + 2, 0x02,
+//         0x08,     0x01,
+//     }, obtained);
+
+//     const decoded = try WithBytes.decode(obtained, testing.allocator);
+//     defer decoded.deinit();
+//     try testing.expectEqualSlices(u8, demo.list_of_data.items, decoded.list_of_data.items);
+// }
 
 const FixedSizesList = struct {
     fixed32List: ArrayList(u32),
 
     pub const _desc_table = .{
-        .fixed32List = fd(1, .{ .List = .FixedInt }, ArrayList(u32)),
+        .fixed32List = fd(1, .{ .List = .{ .FixedInt = .I32 } }, ArrayList(u32)),
     };
 
     pub fn encode(self: FixedSizesList, allocator: Allocator) ![]u8 {
@@ -293,15 +322,7 @@ test "FixedSizesList" {
     defer testing.allocator.free(obtained);
 
     try testing.expectEqualSlices(u8, &[_]u8{
-        0x08 + 2, 0x10,
-        0x01,     0x00,
-        0x00,     0x00,
-        0x02,     0x00,
-        0x00,     0x00,
-        0x03,     0x00,
-        0x00,     0x00,
-        0x04,     0x00,
-        0x00,     0x00,
+        0x0D, 0x01, 0x00, 0x00, 0x00, 0x0D, 0x02, 0x00, 0x00, 0x00, 0x0D, 0x03, 0x00, 0x00, 0x00, 0x0D, 0x04, 0x00, 0x00, 0x00,
     }, obtained);
 
     const decoded = try FixedSizesList.decode(obtained, testing.allocator);
@@ -333,7 +354,7 @@ const VarintList = struct {
     }
 };
 
-test "VarintList" {
+test "VarintList - not packed" {
     var demo = VarintList.init(testing.allocator);
     try demo.varuint32List.append(0x01);
     try demo.varuint32List.append(0x02);
@@ -345,9 +366,10 @@ test "VarintList" {
     defer testing.allocator.free(obtained);
 
     try testing.expectEqualSlices(u8, &[_]u8{
-        0x08 + 2, 0x04,
-        0x01,     0x02,
-        0x03,     0x04,
+        0x08, 0x01,
+        0x08, 0x02,
+        0x08, 0x03,
+        0x08, 0x04,
     }, obtained);
 
     const decoded = try VarintList.decode(obtained, testing.allocator);
@@ -452,7 +474,7 @@ test "EmptyLists" {
     const obtained = try demo.encode(testing.allocator);
     defer testing.allocator.free(obtained);
 
-    try testing.expectEqualSlices(u8, &[_]u8{ 0x0A, 0x01, 0x0A, 0x02, 0x0A, 0x03, 0x0A, 0x04 }, obtained);
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x08, 0x01, 0x08, 0x02, 0x08, 0x03, 0x08, 0x04 }, obtained);
 
     const decoded = try EmptyLists.decode(obtained, testing.allocator);
     defer decoded.deinit();

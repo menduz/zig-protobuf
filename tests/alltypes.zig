@@ -12,14 +12,14 @@ const fd = protobuf.fd;
 const expected = @embedFile("encode_alltypes.output");
 
 const SubMessage = struct {
-    substuff1: ArrayList(u8),
+    substuff1: ArrayList(u32),
     substuff2: ?i32,
     substuff3: ?i32,
 
-    pub const _desc_table = [_]FieldDescriptor{
-        fd(1, "substuff1", .{ .List = .FixedInt }),
-        fd(2, "substuff2", .{ .Varint = .Simple }),
-        fd(3, "substuff3", .FixedInt),
+    pub const _desc_table = .{
+        .substuff1 = fd(1, .{ .List = .{ .FixedInt = .I64 } }),
+        .substuff2 = fd(2, .{ .Varint = .Simple }),
+        .substuff3 = fd(3, .FixedInt),
     };
 
     pub fn encode(self: SubMessage, allocator: *mem.Allocator) ![]u8 {

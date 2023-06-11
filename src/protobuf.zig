@@ -11,8 +11,16 @@ const ArrayList = std.ArrayList;
 /// Type of encoding for a Varint value.
 const VarintType = enum { Simple, ZigZagOptimized };
 
+const DecodingError = error{
+    NotEnoughData,
+};
+
+const UnionDecodingError = DecodingError || Allocator.Error;
+
 /// Enum describing the different field types available.
 pub const FieldTypeTag = enum { Varint, FixedInt, SubMessage, List, PackedList, String, OneOf, Map };
+
+pub const TagNumber = enum(u32) { VARINT = 0, I64 = 1, LEN = 2, SGROUP = 3, EGROUP = 4, I32 = 5 };
 
 /// Enum describing the content type of a repeated field.
 pub const ListTypeTag = enum {
@@ -26,7 +34,7 @@ pub const ListTypeTag = enum {
 pub const ListType = union(ListTypeTag) {
     Varint: VarintType,
     String,
-    FixedInt,
+    FixedInt: TagNumber,
     SubMessage,
 };
 
@@ -51,6 +59,7 @@ pub const KeyValueType = union(KeyValueTypeTag) {
             .FixedInt => .{.FixedInt},
             .SubMessage => .{.SubMessage},
             .List => |list_type| .{ .List = list_type },
+            .PackedList => |list_type| .{ .PackedList = list_type },
         };
     }
 };
@@ -67,7 +76,7 @@ pub const MapData = struct { key: KeyValueTypeData, value: KeyValueTypeData };
 /// Main tagged union holding the details of any field type.
 pub const FieldType = union(FieldTypeTag) {
     Varint: VarintType,
-    FixedInt,
+    FixedInt: TagNumber,
     SubMessage,
     String,
     List: ListType,
@@ -76,25 +85,30 @@ pub const FieldType = union(FieldTypeTag) {
     Map: MapData,
 
     /// returns the wire type of a field. see https://developers.google.com/protocol-buffers/docs/encoding#structure
-    pub fn get_wirevalue(comptime ftype: FieldType, comptime value_type: type) u3 {
+    pub fn get_wirevalue(comptime ftype: FieldType) u3 {
         comptime {
             switch (ftype) {
                 .OneOf => @compileError("Shouldn't pass a .OneOf field to this function here."),
                 else => {},
             }
         }
-        const real_type: type = switch (@typeInfo(value_type)) {
-            .Optional => |opt| opt.child,
-            else => value_type,
-        };
         return switch (ftype) {
             .Varint => 0,
-            .FixedInt => return switch (@bitSizeOf(real_type)) {
-                64 => 1,
-                32 => 5,
-                else => @compileLog("Invalid size for fixed int :", @bitSizeOf(real_type), "type is ", real_type),
+            .FixedInt => |size| switch (size) {
+                .I32 => 5,
+                .I64 => 1,
+                else => @compileError("Type " ++ @typeName(ftype) ++ "not compatible with fixed int"),
             },
-            .String, .SubMessage, .PackedList, .List, .Map => 2,
+            .String, .SubMessage, .PackedList, .Map => 2,
+            .List => |inner| switch (inner) {
+                .Varint => 0,
+                .FixedInt => |size| switch (size) {
+                    .I32 => 5,
+                    .I64 => 1,
+                    else => @compileError("Type " ++ @typeName(ftype) ++ "not compatible with fixed int"),
+                },
+                .String, .SubMessage => 2,
+            },
             .OneOf => unreachable,
         };
     }
@@ -109,10 +123,10 @@ pub const FieldDescriptor = struct {
 };
 
 /// Helper function to build a FieldDescriptor. Makes code clearer, mostly.
-pub fn fd(comptime fieldNumber: ?u32, comptime ftype: FieldType, comptime T: type) FieldDescriptor {
+pub fn fd(comptime fieldNumber: ?u32, comptime ftype: FieldType, comptime _: type) FieldDescriptor {
     // calculates the comptime value of (tag_index << 3) + wire type.
     // This is fully calculated at comptime which is great.
-    const tag: ?u32 = if (fieldNumber) |num| ((num << 3) | ftype.get_wirevalue(T)) else null;
+    const tag: ?u32 = if (fieldNumber) |num| ((num << 3) | ftype.get_wirevalue()) else null;
 
     return FieldDescriptor{ .fieldNumber = fieldNumber, .ftype = ftype, .tag = tag };
 }
@@ -200,9 +214,10 @@ fn append_fixed(pb: *ArrayList(u8), value: anytype) !void {
 
     var as_unsigned_int = switch (@TypeOf(value)) {
         f32, f64, i32, i64 => @bitCast(std.meta.Int(.unsigned, bitsize), value),
-        u32, u64, u8 => value,
+        u32, u64, u8 => @as(u64, value),
         else => unreachable,
     };
+
     var index: usize = 0;
 
     while (index < (bitsize / 8)) : (index += 1) {
@@ -247,13 +262,10 @@ fn append_list_of_fixed(pb: *ArrayList(u8), value: anytype) !void {
 
 /// Appends a list of varint to the pb buffer.
 fn append_list_of_varint(pb: *ArrayList(u8), comptime field: FieldDescriptor, value_list: anytype, comptime varint_type: VarintType) !void {
-    // const len_index = pb.items.len;
     for (value_list.items) |item| {
         try append_tag(pb, field);
         try append_varint(pb, item, varint_type);
     }
-    // const size_encoded = pb.items.len - len_index;
-    // try insert_raw_varint(pb, size_encoded, len_index);
 }
 
 /// Appends a list of submessages to the pb_buffer.
@@ -351,22 +363,48 @@ fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, value: anytype) !
         },
         .PackedList => |_| {
             try append_tag(pb, field);
+            // switch (list_type) {
+            //     .FixedInt => {
+            //         try append_tag(pb, field);
+            //         try append_list_of_fixed(pb, value);
+            //     },
+            //     .SubMessage => {
+            //         try append_list_of_submessages(pb, field, value);
+            //     },
+            //     .String => {
+            //         try append_list_of_strings(pb, field, value);
+            //     },
+            //     .Varint => |varint_type| {
+            //         try append_list_of_varint(pb, field, value, varint_type);
+            //     },
+            // }
             @panic(".PackedList append not implemented");
         },
         .List => |list_type| {
             switch (list_type) {
                 .FixedInt => {
-                    try append_tag(pb, field);
-                    try append_list_of_fixed(pb, value);
+                    for (value.items) |item| {
+                        try append_tag(pb, field);
+                        try append_fixed(pb, item);
+                    }
                 },
                 .SubMessage => {
-                    try append_list_of_submessages(pb, field, value);
+                    for (value.items) |item| {
+                        try append_tag(pb, field);
+                        try append_submessage(pb, item);
+                    }
                 },
                 .String => {
-                    try append_list_of_strings(pb, field, value);
+                    for (value.items) |item| {
+                        try append_tag(pb, field);
+                        try append_const_bytes(pb, item);
+                    }
                 },
                 .Varint => |varint_type| {
-                    try append_list_of_varint(pb, field, value, varint_type);
+                    for (value.items) |item| {
+                        try append_tag(pb, field);
+                        try append_varint(pb, item, varint_type);
+                    }
                 },
             }
         },
@@ -554,9 +592,18 @@ fn decode_fixed(comptime T: type, slice: []const u8) T {
     for (slice, 0..) |byte, index| {
         result += @intCast(result_base, byte) << (@intCast(std.math.Log2Int(result_base), index * 8));
     }
+
     return switch (T) {
         u32, u64 => result,
         else => @bitCast(T, result),
+    };
+}
+
+/// Decodes a fixed value to type T
+fn decode_fixed_raw(comptime T: type, value: u64) T {
+    return switch (T) {
+        f32, u32, i32 => @bitCast(T, @intCast(u32, value)),
+        else => @bitCast(T, value),
     };
 }
 
@@ -643,42 +690,52 @@ fn SubmessageDecoderIterator(comptime T: type) type {
 }
 
 /// "Tokenizer" of a byte slice to raw pb data.
-const WireDecoderIterator = struct {
+pub const WireDecoderIterator = struct {
     input: []const u8,
     current_index: usize = 0,
 
     /// Attempts at decoding the next pb_buffer data.
-    fn next(state: *WireDecoderIterator) !?Extracted {
+    pub fn next(state: *WireDecoderIterator) DecodingError!?Extracted {
         if (state.current_index < state.input.len) {
             const tag_and_wire = decode_varint(u32, state.input[state.current_index..]);
             state.current_index += tag_and_wire.size;
             const wire_type = tag_and_wire.value & 0b00000111;
             const data: ExtractedData = switch (wire_type) {
-                0 => blk: {
+                0 => blk: { // VARINT
                     const varint = decode_varint(u64, state.input[state.current_index..]);
                     state.current_index += varint.size;
                     break :blk ExtractedData{
                         .RawValue = varint.value,
                     };
                 },
-                1 => blk: {
+                1 => blk: { // 64BIT
                     const value = ExtractedData{ .RawValue = decode_fixed(u64, state.input[state.current_index .. state.current_index + 8]) };
                     state.current_index += 8;
                     break :blk value;
                 },
-                5 => blk: {
+                2 => blk: { // LEN PREFIXED MESSAGE
+                    const size = decode_varint(u32, state.input[state.current_index..]);
+                    const start = (state.current_index + size.size);
+                    const end = start + size.value;
+
+                    if (state.input.len < start or state.input.len < end) {
+                        return error.NotEnoughData;
+                    }
+
+                    const value = ExtractedData{ .Slice = state.input[start..end] };
+                    state.current_index += size.value + size.size;
+                    break :blk value;
+                },
+                3, 4 => { // SGROUP,EGROUP
+                    return null;
+                },
+                5 => blk: { // 32BIT
                     const value = ExtractedData{ .RawValue = decode_fixed(u32, state.input[state.current_index .. state.current_index + 4]) };
                     state.current_index += 4;
                     break :blk value;
                 },
-                2 => blk: {
-                    const size = decode_varint(u32, state.input[state.current_index..]);
-                    const value = ExtractedData{ .Slice = state.input[(state.current_index + size.size)..(state.current_index + size.size + size.value)] };
-                    state.current_index += size.value + size.size;
-                    break :blk value;
-                },
                 else => {
-                    @panic("Not implemented yet");
+                    @panic("unreachable");
                 },
             };
 
@@ -699,13 +756,13 @@ fn get_varint_value(comptime T: type, comptime varint_type: VarintType, raw: u64
         },
         .Simple => switch (@typeInfo(T)) {
             .Int => switch (T) {
-                u32, u64 => @intCast(T, raw),
+                u8, u32, u64 => @intCast(T, raw),
                 i32, i64 => @bitCast(T, @truncate(std.meta.Int(.unsigned, @bitSizeOf(T)), raw)),
-                else => @compileError("Invalid type passed"),
+                else => @compileError("Invalid type " ++ @typeName(T) ++ " passed"),
             },
             .Bool => raw == 1,
             .Enum => @intToEnum(T, @intCast(i32, raw)),
-            else => @compileError("Invalid type passed"),
+            else => @compileError("Invalid type " ++ @typeName(T) ++ " passed"),
         },
     };
 }
@@ -719,7 +776,7 @@ fn get_fixed_value(comptime T: type, raw: u64) T {
     };
 }
 
-fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type, array: *ArrayList(T), allocator: Allocator) Allocator.Error!void {
+fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type, array: *ArrayList(T), allocator: Allocator) UnionDecodingError!void {
     switch (list_type) {
         .FixedInt => {
             switch (T) {
@@ -806,7 +863,24 @@ fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime 
         },
         .List => |list_type| {
             const child_type = @typeInfo(@TypeOf(@field(result, field.name).items)).Pointer.child;
-            try decode_list(extracted_data.data.Slice, list_type, child_type, &@field(result, field.name), allocator);
+            switch (list_type) {
+                .Varint => |varint_type| {
+                    switch (extracted_data.data) {
+                        .RawValue => |value| try @field(result, field.name).append(get_varint_value(child_type, varint_type, value)),
+                        .Slice => @panic("Invalid data"),
+                    }
+                },
+                .FixedInt => |_| {
+                    switch (extracted_data.data) {
+                        .RawValue => |value| try @field(result, field.name).append(decode_fixed_raw(child_type, value)),
+                        .Slice => @panic("Invalid data"),
+                    }
+                },
+                .SubMessage, .String => switch (extracted_data.data) {
+                    .Slice => |slice| try decode_list(slice, list_type, child_type, &@field(result, field.name), allocator),
+                    .RawValue => @panic("Invalid data"),
+                },
+            }
         },
         .PackedList => |list_type| {
             const child_type = @typeInfo(@TypeOf(@field(result, field.name).items)).Pointer.child;

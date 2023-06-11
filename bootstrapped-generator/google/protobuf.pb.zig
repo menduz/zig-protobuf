@@ -770,7 +770,7 @@ pub const UninterpretedOption = struct {
         .identifier_value = fd(3, .String, ?[]const u8),
         .positive_int_value = fd(4, .{ .Varint = .Simple }, ?u64),
         .negative_int_value = fd(5, .{ .Varint = .Simple }, ?i64),
-        .double_value = fd(6, .FixedInt, ?f64),
+        .double_value = fd(6, .{ .FixedInt = .I64 }, ?f64),
         .string_value = fd(7, .String, ?[]const u8),
         .aggregate_value = fd(8, .String, ?[]const u8),
     };

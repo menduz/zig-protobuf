@@ -37,6 +37,7 @@ pub fn build(b: *std.build.Builder) void {
         .optimize = optimize,
     });
 
+    exe.step.dependOn(&lib.step);
     exe.addModule("protobuf", protobuf);
 
     // This declares intent for the executable to be installed into the
@@ -44,11 +45,12 @@ pub fn build(b: *std.build.Builder) void {
     // step when running `zig build`).
     b.installArtifact(exe);
 
-    // run test.sh after the exe is done building
-    const testSh = b.addSystemCommand(&[_][]const u8{ "bash", "test.sh" });
-    testSh.step.dependOn(&exe.step);
+    // gen_tests generates the code for tests using the generator
+    const gen_tests = b.addSystemCommand(&[_][]const u8{ "bash", "generate-tests.sh" });
+    gen_tests.step.dependOn(&exe.step);
 
-    exe.step.dependOn(&lib.step);
+    const test_step = b.step("test", "Run library tests");
+    test_step.dependOn(&gen_tests.step);
 
     var tests = [_]*std.build.LibExeObjStep{
         b.addTest(.{
@@ -95,8 +97,6 @@ pub fn build(b: *std.build.Builder) void {
         }),
     };
 
-    const test_step = b.step("test", "Run library tests");
-
     for (tests) |test_item| {
         test_item.addModule("protobuf", protobuf);
 
@@ -107,8 +107,11 @@ pub fn build(b: *std.build.Builder) void {
         test_step.dependOn(&run_main_tests.step);
     }
 
-    const gen_step = b.step("gen", "Generate the bootstrapping code");
+    const gen_bootstrap = b.addSystemCommand(&[_][]const u8{ "bash", "generate-tests.sh" });
+    gen_bootstrap.step.dependOn(&exe.step);
 
-    gen_step.dependOn(test_step);
-    gen_step.dependOn(&testSh.step);
+    const bootstrap_step = b.step("bootstrap", "Generate the bootstrapping code");
+
+    bootstrap_step.dependOn(&exe.step);
+    bootstrap_step.dependOn(&gen_bootstrap.step);
 }
