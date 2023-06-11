@@ -8,6 +8,9 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v2
+      - name: install protoc
+        run: bash ./devcontainer/install-protoc.sh
+
       - uses: goto-bus-stop/setup-zig@v1
         with:
           version: master
