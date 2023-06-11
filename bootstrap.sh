@@ -2,7 +2,7 @@
 
 cd generator
 
-rm protoc-gen-main || true 
+# rm protoc-gen-main || true 
 go build  -o protoc-gen-main main.go
 
 cd ..
