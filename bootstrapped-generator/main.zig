@@ -1,7 +1,7 @@
 const warn = @import("std").debug.warn;
 const std = @import("std");
-const plugin = @import("google/protobuf/compiler/plugin.pb.zig");
-const descriptor = @import("google/protobuf/descriptor.pb.zig");
+const plugin = @import("google/protobuf/compiler.pb.zig");
+const descriptor = @import("google/protobuf.pb.zig");
 const mem = std.mem;
 const FullName = @import("./FullName.zig").FullName;
 

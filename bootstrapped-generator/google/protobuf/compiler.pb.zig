@@ -13,7 +13,7 @@ const pb_deinit = protobuf.pb_deinit;
 const pb_init = protobuf.pb_init;
 const fd = protobuf.fd;
 
-const google_protobuf_descriptor_proto = @import("../../protobuf/descriptor.pb.zig");
+const google_protobuf_descriptor_proto = @import("../protobuf.pb.zig");
 // The version number of protocol compiler.
 pub const Version = struct {
     major: ?i32,
