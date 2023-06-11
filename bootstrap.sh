@@ -1,18 +1,12 @@
 #!/bin/bash
 
-cd generator
-
-# rm protoc-gen-main || true 
-go build  -o protoc-gen-main main.go
-
-cd ..
+zig build
 
 rm -rf bootstrapped-generator/google
 mkdir -p bootstrapped-generator/google || true
 
-export GO_IMPORT_PATH=tests/protos_for_test
-protoc --plugin=generator/protoc-gen-main \
-  --main_out=bootstrapped-generator \
+protoc --plugin=zig-out/bin/protoc-gen-zig \
+  --zig_out=bootstrapped-generator \
   /usr/local/lib/protobuf/include/google/protobuf/compiler/plugin.proto \
   /usr/local/lib/protobuf/include/google/protobuf/descriptor.proto
 

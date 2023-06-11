@@ -1,12 +1,5 @@
 #!/bin/bash
 
-cd generator
-
-rm protoc-gen-main || true 
-go build  -o protoc-gen-main main.go
-
-cd ..
-
 rm -rf tmp || true
 mkdir -p tmp || true
 

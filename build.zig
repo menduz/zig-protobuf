@@ -28,8 +28,6 @@ pub fn build(b: *std.build.Builder) void {
 
     const protobuf = b.createModule(.{ .source_file = .{ .path = "src/protobuf.zig" } });
 
-    const generate = b.addSystemCommand(&[_][]const u8{ "bash", "bootstrap.sh" });
-
     const exe = b.addExecutable(.{
         .name = "protoc-gen-zig",
         // In this case the main source file is merely a path, however, in more
@@ -50,7 +48,6 @@ pub fn build(b: *std.build.Builder) void {
     const testSh = b.addSystemCommand(&[_][]const u8{ "bash", "test.sh" });
     testSh.step.dependOn(&exe.step);
 
-    exe.step.dependOn(&generate.step);
     exe.step.dependOn(&lib.step);
 
     var tests = [_]*std.build.LibExeObjStep{
@@ -108,7 +105,6 @@ pub fn build(b: *std.build.Builder) void {
         // This will evaluate the `test` step rather than the default, which is "install".
         const run_main_tests = b.addRunArtifact(test_item);
         test_step.dependOn(&run_main_tests.step);
-        test_step.dependOn(&generate.step);
     }
 
     const gen_step = b.step("gen", "Generate the bootstrapping code");
