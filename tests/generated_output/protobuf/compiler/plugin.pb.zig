@@ -16,18 +16,18 @@ const fd = protobuf.fd;
 const google_protobuf_descriptor_proto = @import("../../protobuf/descriptor.pb.zig");
 // The version number of protocol compiler.
 pub const Version = struct {
-    major: ?i32 = null,
-    minor: ?i32 = null,
-    patch: ?i32 = null,
+    major: ?i32,
+    minor: ?i32,
+    patch: ?i32,
     // A suffix for alpha, beta or rc release, e.g., "alpha-1", "rc2". It should
     // be empty for mainline stable releases.
-    suffix: ?[]const u8 = null,
+    suffix: ?[]const u8,
 
     pub const _desc_table = .{
-        .major = fd(1, .{ .Varint = .Simple }),
-        .minor = fd(2, .{ .Varint = .Simple }),
-        .patch = fd(3, .{ .Varint = .Simple }),
-        .suffix = fd(4, .String),
+        .major = fd(1, .{ .Varint = .Simple }, ?i32),
+        .minor = fd(2, .{ .Varint = .Simple }, ?i32),
+        .patch = fd(3, .{ .Varint = .Simple }, ?i32),
+        .suffix = fd(4, .String, ?[]const u8),
     };
 
     pub fn encode(self: Version, allocator: Allocator) ![]u8 {
@@ -54,7 +54,7 @@ pub const CodeGeneratorRequest = struct {
     // descriptor will be included in proto_file, below.
     file_to_generate: ArrayList([]const u8),
     // The generator parameter passed on the command-line.
-    parameter: ?[]const u8 = null,
+    parameter: ?[]const u8,
     // FileDescriptorProtos for all files in files_to_generate and everything
     // they import.  The files will appear in topological order, so each file
     // appears before any file that imports it.
@@ -71,13 +71,13 @@ pub const CodeGeneratorRequest = struct {
     // fully qualified.
     proto_file: ArrayList(google_protobuf_descriptor_proto.FileDescriptorProto),
     // The version number of protocol compiler.
-    compiler_version: ?Version = null,
+    compiler_version: ?Version,
 
     pub const _desc_table = .{
-        .file_to_generate = fd(1, .{ .List = .String }),
-        .parameter = fd(2, .String),
-        .proto_file = fd(15, .{ .List = .SubMessage }),
-        .compiler_version = fd(3, .{ .SubMessage = {} }),
+        .file_to_generate = fd(1, .{ .List = .String }, ArrayList([]const u8)),
+        .parameter = fd(2, .String, ?[]const u8),
+        .proto_file = fd(15, .{ .List = .SubMessage }, ArrayList(google_protobuf_descriptor_proto.FileDescriptorProto)),
+        .compiler_version = fd(3, .{ .SubMessage = {} }, ?Version),
     };
 
     pub fn encode(self: CodeGeneratorRequest, allocator: Allocator) ![]u8 {
@@ -107,10 +107,10 @@ pub const CodeGeneratorResponse = struct {
     // problem in protoc itself -- such as the input CodeGeneratorRequest being
     // unparseable -- should be reported by writing a message to stderr and
     // exiting with a non-zero status code.
-    @"error": ?[]const u8 = null,
+    @"error": ?[]const u8,
     // A bitmask of supported features that the code generator supports.
     // This is a bitwise "or" of values from the Feature enum.
-    supported_features: ?u64 = null,
+    supported_features: ?u64,
     file: ArrayList(File),
     // Sync with code_generator.h.
     pub const Feature = enum(i32) {
@@ -132,7 +132,7 @@ pub const CodeGeneratorResponse = struct {
         // files need not reside completely in memory at one time.  Note that as of
         // this writing protoc does not optimize for this -- it will read the entire
         // CodeGeneratorResponse before writing files to disk.
-        name: ?[]const u8 = null,
+        name: ?[]const u8,
         // If non-empty, indicates that the named file should already exist, and the
         // content here is to be inserted into that file at a defined insertion
         // point.  This feature allows a code generator to extend the output
@@ -170,19 +170,19 @@ pub const CodeGeneratorResponse = struct {
         // command line.
         //
         // If |insertion_point| is present, |name| must also be present.
-        insertion_point: ?[]const u8 = null,
+        insertion_point: ?[]const u8,
         // The file contents.
-        content: ?[]const u8 = null,
+        content: ?[]const u8,
         // Information describing the file content being inserted. If an insertion
         // point is used, this information will be appropriately offset and inserted
         // into the code generation metadata for the generated files.
-        generated_code_info: ?google_protobuf_descriptor_proto.GeneratedCodeInfo = null,
+        generated_code_info: ?google_protobuf_descriptor_proto.GeneratedCodeInfo,
 
         pub const _desc_table = .{
-            .name = fd(1, .String),
-            .insertion_point = fd(2, .String),
-            .content = fd(15, .String),
-            .generated_code_info = fd(16, .{ .SubMessage = {} }),
+            .name = fd(1, .String, ?[]const u8),
+            .insertion_point = fd(2, .String, ?[]const u8),
+            .content = fd(15, .String, ?[]const u8),
+            .generated_code_info = fd(16, .{ .SubMessage = {} }, ?google_protobuf_descriptor_proto.GeneratedCodeInfo),
         };
 
         pub fn encode(self: File, allocator: Allocator) ![]u8 {
@@ -203,9 +203,9 @@ pub const CodeGeneratorResponse = struct {
     };
 
     pub const _desc_table = .{
-        .@"error" = fd(1, .String),
-        .supported_features = fd(2, .{ .Varint = .Simple }),
-        .file = fd(15, .{ .List = .SubMessage }),
+        .@"error" = fd(1, .String, ?[]const u8),
+        .supported_features = fd(2, .{ .Varint = .Simple }, ?u64),
+        .file = fd(15, .{ .List = .SubMessage }, ArrayList(File)),
     };
 
     pub fn encode(self: CodeGeneratorResponse, allocator: Allocator) ![]u8 {

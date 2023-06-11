@@ -6,3 +6,5 @@ generator/**/*.zig
 generator/**/protoc-gen-zig*
 zig-out
 generator/protoc-gen-main
+dcl
+protocol

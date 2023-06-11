@@ -1,0 +1,8 @@
+syntax = "proto3";
+package tests;
+
+import "fixedsizes.proto";
+
+message Test {
+  tests.FixedSizes a = 1;
+}

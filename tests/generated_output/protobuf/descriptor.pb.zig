@@ -19,7 +19,7 @@ pub const FileDescriptorSet = struct {
     file: ArrayList(FileDescriptorProto),
 
     pub const _desc_table = .{
-        .file = fd(1, .{ .List = .SubMessage }),
+        .file = fd(1, .{ .List = .SubMessage }, ArrayList(FileDescriptorProto)),
     };
 
     pub fn encode(self: FileDescriptorSet, allocator: Allocator) ![]u8 {
@@ -41,8 +41,8 @@ pub const FileDescriptorSet = struct {
 
 // Describes a complete .proto file.
 pub const FileDescriptorProto = struct {
-    name: ?[]const u8 = null,
-    package: ?[]const u8 = null,
+    name: ?[]const u8,
+    package: ?[]const u8,
     // Names of files imported by this file.
     dependency: ArrayList([]const u8),
     // Indexes of the public imported files in the dependency list above.
@@ -55,34 +55,34 @@ pub const FileDescriptorProto = struct {
     enum_type: ArrayList(EnumDescriptorProto),
     service: ArrayList(ServiceDescriptorProto),
     extension: ArrayList(FieldDescriptorProto),
-    options: ?FileOptions = null,
+    options: ?FileOptions,
     // This field contains optional information about the original source code.
     // You may safely remove this entire field without harming runtime
     // functionality of the descriptors -- the information is needed only by
     // development tools.
-    source_code_info: ?SourceCodeInfo = null,
+    source_code_info: ?SourceCodeInfo,
     // The syntax of the proto file.
     // The supported values are "proto2", "proto3", and "editions".
     //
     // If `edition` is present, this value must be "editions".
-    syntax: ?[]const u8 = null,
+    syntax: ?[]const u8,
     // The edition of the proto file, which is an opaque string.
-    edition: ?[]const u8 = null,
+    edition: ?[]const u8,
 
     pub const _desc_table = .{
-        .name = fd(1, .String),
-        .package = fd(2, .String),
-        .dependency = fd(3, .{ .List = .String }),
-        .public_dependency = fd(10, .{ .List = .{ .Varint = .Simple } }),
-        .weak_dependency = fd(11, .{ .List = .{ .Varint = .Simple } }),
-        .message_type = fd(4, .{ .List = .SubMessage }),
-        .enum_type = fd(5, .{ .List = .SubMessage }),
-        .service = fd(6, .{ .List = .SubMessage }),
-        .extension = fd(7, .{ .List = .SubMessage }),
-        .options = fd(8, .{ .SubMessage = {} }),
-        .source_code_info = fd(9, .{ .SubMessage = {} }),
-        .syntax = fd(12, .String),
-        .edition = fd(13, .String),
+        .name = fd(1, .String, ?[]const u8),
+        .package = fd(2, .String, ?[]const u8),
+        .dependency = fd(3, .{ .List = .String }, ArrayList([]const u8)),
+        .public_dependency = fd(10, .{ .List = .{ .Varint = .Simple } }, ArrayList(i32)),
+        .weak_dependency = fd(11, .{ .List = .{ .Varint = .Simple } }, ArrayList(i32)),
+        .message_type = fd(4, .{ .List = .SubMessage }, ArrayList(DescriptorProto)),
+        .enum_type = fd(5, .{ .List = .SubMessage }, ArrayList(EnumDescriptorProto)),
+        .service = fd(6, .{ .List = .SubMessage }, ArrayList(ServiceDescriptorProto)),
+        .extension = fd(7, .{ .List = .SubMessage }, ArrayList(FieldDescriptorProto)),
+        .options = fd(8, .{ .SubMessage = {} }, ?FileOptions),
+        .source_code_info = fd(9, .{ .SubMessage = {} }, ?SourceCodeInfo),
+        .syntax = fd(12, .String, ?[]const u8),
+        .edition = fd(13, .String, ?[]const u8),
     };
 
     pub fn encode(self: FileDescriptorProto, allocator: Allocator) ![]u8 {
@@ -104,27 +104,27 @@ pub const FileDescriptorProto = struct {
 
 // Describes a message type.
 pub const DescriptorProto = struct {
-    name: ?[]const u8 = null,
+    name: ?[]const u8,
     field: ArrayList(FieldDescriptorProto),
     extension: ArrayList(FieldDescriptorProto),
     nested_type: ArrayList(DescriptorProto),
     enum_type: ArrayList(EnumDescriptorProto),
     extension_range: ArrayList(ExtensionRange),
     oneof_decl: ArrayList(OneofDescriptorProto),
-    options: ?MessageOptions = null,
+    options: ?MessageOptions,
     reserved_range: ArrayList(ReservedRange),
     // Reserved field names, which may not be used by fields in the same message.
     // A given name may only be reserved once.
     reserved_name: ArrayList([]const u8),
     pub const ExtensionRange = struct {
-        start: ?i32 = null,
-        end: ?i32 = null,
-        options: ?ExtensionRangeOptions = null,
+        start: ?i32,
+        end: ?i32,
+        options: ?ExtensionRangeOptions,
 
         pub const _desc_table = .{
-            .start = fd(1, .{ .Varint = .Simple }),
-            .end = fd(2, .{ .Varint = .Simple }),
-            .options = fd(3, .{ .SubMessage = {} }),
+            .start = fd(1, .{ .Varint = .Simple }, ?i32),
+            .end = fd(2, .{ .Varint = .Simple }, ?i32),
+            .options = fd(3, .{ .SubMessage = {} }, ?ExtensionRangeOptions),
         };
 
         pub fn encode(self: ExtensionRange, allocator: Allocator) ![]u8 {
@@ -148,12 +148,12 @@ pub const DescriptorProto = struct {
     // fields or extension ranges in the same message. Reserved ranges may
     // not overlap.
     pub const ReservedRange = struct {
-        start: ?i32 = null,
-        end: ?i32 = null,
+        start: ?i32,
+        end: ?i32,
 
         pub const _desc_table = .{
-            .start = fd(1, .{ .Varint = .Simple }),
-            .end = fd(2, .{ .Varint = .Simple }),
+            .start = fd(1, .{ .Varint = .Simple }, ?i32),
+            .end = fd(2, .{ .Varint = .Simple }, ?i32),
         };
 
         pub fn encode(self: ReservedRange, allocator: Allocator) ![]u8 {
@@ -174,16 +174,16 @@ pub const DescriptorProto = struct {
     };
 
     pub const _desc_table = .{
-        .name = fd(1, .String),
-        .field = fd(2, .{ .List = .SubMessage }),
-        .extension = fd(6, .{ .List = .SubMessage }),
-        .nested_type = fd(3, .{ .List = .SubMessage }),
-        .enum_type = fd(4, .{ .List = .SubMessage }),
-        .extension_range = fd(5, .{ .List = .SubMessage }),
-        .oneof_decl = fd(8, .{ .List = .SubMessage }),
-        .options = fd(7, .{ .SubMessage = {} }),
-        .reserved_range = fd(9, .{ .List = .SubMessage }),
-        .reserved_name = fd(10, .{ .List = .String }),
+        .name = fd(1, .String, ?[]const u8),
+        .field = fd(2, .{ .List = .SubMessage }, ArrayList(FieldDescriptorProto)),
+        .extension = fd(6, .{ .List = .SubMessage }, ArrayList(FieldDescriptorProto)),
+        .nested_type = fd(3, .{ .List = .SubMessage }, ArrayList(DescriptorProto)),
+        .enum_type = fd(4, .{ .List = .SubMessage }, ArrayList(EnumDescriptorProto)),
+        .extension_range = fd(5, .{ .List = .SubMessage }, ArrayList(ExtensionRange)),
+        .oneof_decl = fd(8, .{ .List = .SubMessage }, ArrayList(OneofDescriptorProto)),
+        .options = fd(7, .{ .SubMessage = {} }, ?MessageOptions),
+        .reserved_range = fd(9, .{ .List = .SubMessage }, ArrayList(ReservedRange)),
+        .reserved_name = fd(10, .{ .List = .String }, ArrayList([]const u8)),
     };
 
     pub fn encode(self: DescriptorProto, allocator: Allocator) ![]u8 {
@@ -214,7 +214,7 @@ pub const ExtensionRangeOptions = struct {
     // The verification state of the range.
     // TODO(b/278783756): flip the default to DECLARATION once all empty ranges
     // are marked as UNVERIFIED.
-    verification: ?VerificationState = null,
+    verification: ?VerificationState,
     // The verification state of the extension range.
     pub const VerificationState = enum(i32) {
         // All the extensions of the range must be declared.
@@ -225,31 +225,31 @@ pub const ExtensionRangeOptions = struct {
 
     pub const Declaration = struct {
         // The extension number declared within the extension range.
-        number: ?i32 = null,
+        number: ?i32,
         // The fully-qualified name of the extension field. There must be a leading
         // dot in front of the full name.
-        full_name: ?[]const u8 = null,
+        full_name: ?[]const u8,
         // The fully-qualified type name of the extension field. Unlike
         // Metadata.type, Declaration.type must have a leading dot for messages
         // and enums.
-        type: ?[]const u8 = null,
+        type: ?[]const u8,
         // Deprecated. Please use "repeated".
-        is_repeated: ?bool = null,
+        is_repeated: ?bool,
         // If true, indicates that the number is reserved in the extension range,
         // and any extension field with the number will fail to compile. Set this
         // when a declared extension field is deleted.
-        reserved: ?bool = null,
+        reserved: ?bool,
         // If true, indicates that the extension must be defined as repeated.
         // Otherwise the extension must be defined as optional.
-        repeated: ?bool = null,
+        repeated: ?bool,
 
         pub const _desc_table = .{
-            .number = fd(1, .{ .Varint = .Simple }),
-            .full_name = fd(2, .String),
-            .type = fd(3, .String),
-            .is_repeated = fd(4, .{ .Varint = .Simple }),
-            .reserved = fd(5, .{ .Varint = .Simple }),
-            .repeated = fd(6, .{ .Varint = .Simple }),
+            .number = fd(1, .{ .Varint = .Simple }, ?i32),
+            .full_name = fd(2, .String, ?[]const u8),
+            .type = fd(3, .String, ?[]const u8),
+            .is_repeated = fd(4, .{ .Varint = .Simple }, ?bool),
+            .reserved = fd(5, .{ .Varint = .Simple }, ?bool),
+            .repeated = fd(6, .{ .Varint = .Simple }, ?bool),
         };
 
         pub fn encode(self: Declaration, allocator: Allocator) ![]u8 {
@@ -270,9 +270,9 @@ pub const ExtensionRangeOptions = struct {
     };
 
     pub const _desc_table = .{
-        .uninterpreted_option = fd(999, .{ .List = .SubMessage }),
-        .declaration = fd(2, .{ .List = .SubMessage }),
-        .verification = fd(3, .{ .Varint = .ZigZagOptimized }),
+        .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
+        .declaration = fd(2, .{ .List = .SubMessage }, ArrayList(Declaration)),
+        .verification = fd(3, .{ .Varint = .Simple }, ?VerificationState),
     };
 
     pub fn encode(self: ExtensionRangeOptions, allocator: Allocator) ![]u8 {
@@ -294,35 +294,35 @@ pub const ExtensionRangeOptions = struct {
 
 // Describes a field within a message.
 pub const FieldDescriptorProto = struct {
-    name: ?[]const u8 = null,
-    number: ?i32 = null,
-    label: ?Label = null,
+    name: ?[]const u8,
+    number: ?i32,
+    label: ?Label,
     // If type_name is set, this need not be set.  If both this and type_name
     // are set, this must be one of TYPE_ENUM, TYPE_MESSAGE or TYPE_GROUP.
-    type: ?Type = null,
+    type: ?Type,
     // For message and enum types, this is the name of the type.  If the name
     // starts with a '.', it is fully-qualified.  Otherwise, C++-like scoping
     // rules are used to find the type (i.e. first the nested types within this
     // message are searched, then within the parent, on up to the root
     // namespace).
-    type_name: ?[]const u8 = null,
+    type_name: ?[]const u8,
     // For extensions, this is the name of the type being extended.  It is
     // resolved in the same manner as type_name.
-    extendee: ?[]const u8 = null,
+    extendee: ?[]const u8,
     // For numeric types, contains the original text representation of the value.
     // For booleans, "true" or "false".
     // For strings, contains the default text contents (not escaped in any way).
     // For bytes, contains the C escaped value.  All bytes >= 128 are escaped.
-    default_value: ?[]const u8 = null,
+    default_value: ?[]const u8,
     // If set, gives the index of a oneof in the containing type's oneof_decl
     // list.  This field is a member of that oneof.
-    oneof_index: ?i32 = null,
+    oneof_index: ?i32,
     // JSON name of this field. The value is set by protocol compiler. If the
     // user has set a "json_name" option on this field, that option's value
     // will be used. Otherwise, it's deduced from the field's name by converting
     // it to camelCase.
-    json_name: ?[]const u8 = null,
-    options: ?FieldOptions = null,
+    json_name: ?[]const u8,
+    options: ?FieldOptions,
     // If true, this is a proto3 "optional". When a proto3 field is optional, it
     // tracks presence regardless of field type.
     //
@@ -344,7 +344,7 @@ pub const FieldDescriptorProto = struct {
     //
     // Proto2 optional fields do not set this flag, because they already indicate
     // optional with `LABEL_OPTIONAL`.
-    proto3_optional: ?bool = null,
+    proto3_optional: ?bool,
     pub const Type = enum(i32) {
         // 0 is reserved for errors.
         // Order is weird for historical reasons.
@@ -387,17 +387,17 @@ pub const FieldDescriptorProto = struct {
     };
 
     pub const _desc_table = .{
-        .name = fd(1, .String),
-        .number = fd(3, .{ .Varint = .Simple }),
-        .label = fd(4, .{ .Varint = .ZigZagOptimized }),
-        .type = fd(5, .{ .Varint = .ZigZagOptimized }),
-        .type_name = fd(6, .String),
-        .extendee = fd(2, .String),
-        .default_value = fd(7, .String),
-        .oneof_index = fd(9, .{ .Varint = .Simple }),
-        .json_name = fd(10, .String),
-        .options = fd(8, .{ .SubMessage = {} }),
-        .proto3_optional = fd(17, .{ .Varint = .Simple }),
+        .name = fd(1, .String, ?[]const u8),
+        .number = fd(3, .{ .Varint = .Simple }, ?i32),
+        .label = fd(4, .{ .Varint = .Simple }, ?Label),
+        .type = fd(5, .{ .Varint = .Simple }, ?Type),
+        .type_name = fd(6, .String, ?[]const u8),
+        .extendee = fd(2, .String, ?[]const u8),
+        .default_value = fd(7, .String, ?[]const u8),
+        .oneof_index = fd(9, .{ .Varint = .Simple }, ?i32),
+        .json_name = fd(10, .String, ?[]const u8),
+        .options = fd(8, .{ .SubMessage = {} }, ?FieldOptions),
+        .proto3_optional = fd(17, .{ .Varint = .Simple }, ?bool),
     };
 
     pub fn encode(self: FieldDescriptorProto, allocator: Allocator) ![]u8 {
@@ -419,12 +419,12 @@ pub const FieldDescriptorProto = struct {
 
 // Describes a oneof.
 pub const OneofDescriptorProto = struct {
-    name: ?[]const u8 = null,
-    options: ?OneofOptions = null,
+    name: ?[]const u8,
+    options: ?OneofOptions,
 
     pub const _desc_table = .{
-        .name = fd(1, .String),
-        .options = fd(2, .{ .SubMessage = {} }),
+        .name = fd(1, .String, ?[]const u8),
+        .options = fd(2, .{ .SubMessage = {} }, ?OneofOptions),
     };
 
     pub fn encode(self: OneofDescriptorProto, allocator: Allocator) ![]u8 {
@@ -446,9 +446,9 @@ pub const OneofDescriptorProto = struct {
 
 // Describes an enum type.
 pub const EnumDescriptorProto = struct {
-    name: ?[]const u8 = null,
+    name: ?[]const u8,
     value: ArrayList(EnumValueDescriptorProto),
-    options: ?EnumOptions = null,
+    options: ?EnumOptions,
     // Range of reserved numeric values. Reserved numeric values may not be used
     // by enum values in the same enum declaration. Reserved ranges may not
     // overlap.
@@ -463,12 +463,12 @@ pub const EnumDescriptorProto = struct {
     // is inclusive such that it can appropriately represent the entire int32
     // domain.
     pub const EnumReservedRange = struct {
-        start: ?i32 = null,
-        end: ?i32 = null,
+        start: ?i32,
+        end: ?i32,
 
         pub const _desc_table = .{
-            .start = fd(1, .{ .Varint = .Simple }),
-            .end = fd(2, .{ .Varint = .Simple }),
+            .start = fd(1, .{ .Varint = .Simple }, ?i32),
+            .end = fd(2, .{ .Varint = .Simple }, ?i32),
         };
 
         pub fn encode(self: EnumReservedRange, allocator: Allocator) ![]u8 {
@@ -489,11 +489,11 @@ pub const EnumDescriptorProto = struct {
     };
 
     pub const _desc_table = .{
-        .name = fd(1, .String),
-        .value = fd(2, .{ .List = .SubMessage }),
-        .options = fd(3, .{ .SubMessage = {} }),
-        .reserved_range = fd(4, .{ .List = .SubMessage }),
-        .reserved_name = fd(5, .{ .List = .String }),
+        .name = fd(1, .String, ?[]const u8),
+        .value = fd(2, .{ .List = .SubMessage }, ArrayList(EnumValueDescriptorProto)),
+        .options = fd(3, .{ .SubMessage = {} }, ?EnumOptions),
+        .reserved_range = fd(4, .{ .List = .SubMessage }, ArrayList(EnumReservedRange)),
+        .reserved_name = fd(5, .{ .List = .String }, ArrayList([]const u8)),
     };
 
     pub fn encode(self: EnumDescriptorProto, allocator: Allocator) ![]u8 {
@@ -515,14 +515,14 @@ pub const EnumDescriptorProto = struct {
 
 // Describes a value within an enum.
 pub const EnumValueDescriptorProto = struct {
-    name: ?[]const u8 = null,
-    number: ?i32 = null,
-    options: ?EnumValueOptions = null,
+    name: ?[]const u8,
+    number: ?i32,
+    options: ?EnumValueOptions,
 
     pub const _desc_table = .{
-        .name = fd(1, .String),
-        .number = fd(2, .{ .Varint = .Simple }),
-        .options = fd(3, .{ .SubMessage = {} }),
+        .name = fd(1, .String, ?[]const u8),
+        .number = fd(2, .{ .Varint = .Simple }, ?i32),
+        .options = fd(3, .{ .SubMessage = {} }, ?EnumValueOptions),
     };
 
     pub fn encode(self: EnumValueDescriptorProto, allocator: Allocator) ![]u8 {
@@ -544,14 +544,14 @@ pub const EnumValueDescriptorProto = struct {
 
 // Describes a service.
 pub const ServiceDescriptorProto = struct {
-    name: ?[]const u8 = null,
+    name: ?[]const u8,
     method: ArrayList(MethodDescriptorProto),
-    options: ?ServiceOptions = null,
+    options: ?ServiceOptions,
 
     pub const _desc_table = .{
-        .name = fd(1, .String),
-        .method = fd(2, .{ .List = .SubMessage }),
-        .options = fd(3, .{ .SubMessage = {} }),
+        .name = fd(1, .String, ?[]const u8),
+        .method = fd(2, .{ .List = .SubMessage }, ArrayList(MethodDescriptorProto)),
+        .options = fd(3, .{ .SubMessage = {} }, ?ServiceOptions),
     };
 
     pub fn encode(self: ServiceDescriptorProto, allocator: Allocator) ![]u8 {
@@ -573,24 +573,24 @@ pub const ServiceDescriptorProto = struct {
 
 // Describes a method of a service.
 pub const MethodDescriptorProto = struct {
-    name: ?[]const u8 = null,
+    name: ?[]const u8,
     // Input and output type names.  These are resolved in the same way as
     // FieldDescriptorProto.type_name, but must refer to a message type.
-    input_type: ?[]const u8 = null,
-    output_type: ?[]const u8 = null,
-    options: ?MethodOptions = null,
+    input_type: ?[]const u8,
+    output_type: ?[]const u8,
+    options: ?MethodOptions,
     // Identifies if client streams multiple client messages
-    client_streaming: ?bool = null,
+    client_streaming: ?bool,
     // Identifies if server streams multiple server messages
-    server_streaming: ?bool = null,
+    server_streaming: ?bool,
 
     pub const _desc_table = .{
-        .name = fd(1, .String),
-        .input_type = fd(2, .String),
-        .output_type = fd(3, .String),
-        .options = fd(4, .{ .SubMessage = {} }),
-        .client_streaming = fd(5, .{ .Varint = .Simple }),
-        .server_streaming = fd(6, .{ .Varint = .Simple }),
+        .name = fd(1, .String, ?[]const u8),
+        .input_type = fd(2, .String, ?[]const u8),
+        .output_type = fd(3, .String, ?[]const u8),
+        .options = fd(4, .{ .SubMessage = {} }, ?MethodOptions),
+        .client_streaming = fd(5, .{ .Varint = .Simple }, ?bool),
+        .server_streaming = fd(6, .{ .Varint = .Simple }, ?bool),
     };
 
     pub fn encode(self: MethodDescriptorProto, allocator: Allocator) ![]u8 {
@@ -615,36 +615,36 @@ pub const FileOptions = struct {
     // placed.  By default, the proto package is used, but this is often
     // inappropriate because proto packages do not normally start with backwards
     // domain names.
-    java_package: ?[]const u8 = null,
+    java_package: ?[]const u8,
     // Controls the name of the wrapper Java class generated for the .proto file.
     // That class will always contain the .proto file's getDescriptor() method as
     // well as any top-level extensions defined in the .proto file.
     // If java_multiple_files is disabled, then all the other classes from the
     // .proto file will be nested inside the single wrapper outer class.
-    java_outer_classname: ?[]const u8 = null,
+    java_outer_classname: ?[]const u8,
     // If enabled, then the Java code generator will generate a separate .java
     // file for each top-level message, enum, and service defined in the .proto
     // file.  Thus, these types will *not* be nested inside the wrapper class
     // named by java_outer_classname.  However, the wrapper class will still be
     // generated to contain the file's getDescriptor() method as well as any
     // top-level extensions defined in the file.
-    java_multiple_files: ?bool = null,
+    java_multiple_files: ?bool,
     // This option does nothing.
-    java_generate_equals_and_hash: ?bool = null,
+    java_generate_equals_and_hash: ?bool,
     // If set true, then the Java2 code generator will generate code that
     // throws an exception whenever an attempt is made to assign a non-UTF-8
     // byte sequence to a string field.
     // Message reflection will do the same.
     // However, an extension field still accepts non-UTF-8 byte sequences.
     // This option has no effect on when used with the lite runtime.
-    java_string_check_utf8: ?bool = null,
-    optimize_for: ?OptimizeMode = null,
+    java_string_check_utf8: ?bool,
+    optimize_for: ?OptimizeMode,
     // Sets the Go package where structs generated from this .proto will be
     // placed. If omitted, the Go package will be derived from the following:
     //   - The basename of the package import path, if provided.
     //   - Otherwise, the package statement in the .proto file, if present.
     //   - Otherwise, the basename of the .proto file, without extension.
-    go_package: ?[]const u8 = null,
+    go_package: ?[]const u8,
     // Should generic services be generated in each language?  "Generic" services
     // are not specific to any particular RPC system.  They are generated by the
     // main code generators in each language (without additional plugins).
@@ -655,43 +655,43 @@ pub const FileOptions = struct {
     // that generate code specific to your particular RPC system.  Therefore,
     // these default to false.  Old code which depends on generic services should
     // explicitly set them to true.
-    cc_generic_services: ?bool = null,
-    java_generic_services: ?bool = null,
-    py_generic_services: ?bool = null,
-    php_generic_services: ?bool = null,
+    cc_generic_services: ?bool,
+    java_generic_services: ?bool,
+    py_generic_services: ?bool,
+    php_generic_services: ?bool,
     // Is this file deprecated?
     // Depending on the target platform, this can emit Deprecated annotations
     // for everything in the file, or it will be completely ignored; in the very
     // least, this is a formalization for deprecating files.
-    deprecated: ?bool = null,
+    deprecated: ?bool,
     // Enables the use of arenas for the proto messages in this file. This applies
     // only to generated classes for C++.
-    cc_enable_arenas: ?bool = null,
+    cc_enable_arenas: ?bool,
     // Sets the objective c class prefix which is prepended to all objective c
     // generated classes from this .proto. There is no default.
-    objc_class_prefix: ?[]const u8 = null,
+    objc_class_prefix: ?[]const u8,
     // Namespace for generated classes; defaults to the package.
-    csharp_namespace: ?[]const u8 = null,
+    csharp_namespace: ?[]const u8,
     // By default Swift generators will take the proto package and CamelCase it
     // replacing '.' with underscore and use that to prefix the types/symbols
     // defined. When this options is provided, they will use this value instead
     // to prefix the types/symbols defined.
-    swift_prefix: ?[]const u8 = null,
+    swift_prefix: ?[]const u8,
     // Sets the php class prefix which is prepended to all php generated classes
     // from this .proto. Default is empty.
-    php_class_prefix: ?[]const u8 = null,
+    php_class_prefix: ?[]const u8,
     // Use this option to change the namespace of php generated classes. Default
     // is empty. When this option is empty, the package name will be used for
     // determining the namespace.
-    php_namespace: ?[]const u8 = null,
+    php_namespace: ?[]const u8,
     // Use this option to change the namespace of php generated metadata classes.
     // Default is empty. When this option is empty, the proto file name will be
     // used for determining the namespace.
-    php_metadata_namespace: ?[]const u8 = null,
+    php_metadata_namespace: ?[]const u8,
     // Use this option to change the package of ruby generated classes. Default
     // is empty. When this option is not set, the package name will be used for
     // determining the ruby package.
-    ruby_package: ?[]const u8 = null,
+    ruby_package: ?[]const u8,
     // The parser stores options it doesn't recognize here.
     // See the documentation for the "Options" section above.
     uninterpreted_option: ArrayList(UninterpretedOption),
@@ -705,27 +705,27 @@ pub const FileOptions = struct {
     };
 
     pub const _desc_table = .{
-        .java_package = fd(1, .String),
-        .java_outer_classname = fd(8, .String),
-        .java_multiple_files = fd(10, .{ .Varint = .Simple }),
-        .java_generate_equals_and_hash = fd(20, .{ .Varint = .Simple }),
-        .java_string_check_utf8 = fd(27, .{ .Varint = .Simple }),
-        .optimize_for = fd(9, .{ .Varint = .ZigZagOptimized }),
-        .go_package = fd(11, .String),
-        .cc_generic_services = fd(16, .{ .Varint = .Simple }),
-        .java_generic_services = fd(17, .{ .Varint = .Simple }),
-        .py_generic_services = fd(18, .{ .Varint = .Simple }),
-        .php_generic_services = fd(42, .{ .Varint = .Simple }),
-        .deprecated = fd(23, .{ .Varint = .Simple }),
-        .cc_enable_arenas = fd(31, .{ .Varint = .Simple }),
-        .objc_class_prefix = fd(36, .String),
-        .csharp_namespace = fd(37, .String),
-        .swift_prefix = fd(39, .String),
-        .php_class_prefix = fd(40, .String),
-        .php_namespace = fd(41, .String),
-        .php_metadata_namespace = fd(44, .String),
-        .ruby_package = fd(45, .String),
-        .uninterpreted_option = fd(999, .{ .List = .SubMessage }),
+        .java_package = fd(1, .String, ?[]const u8),
+        .java_outer_classname = fd(8, .String, ?[]const u8),
+        .java_multiple_files = fd(10, .{ .Varint = .Simple }, ?bool),
+        .java_generate_equals_and_hash = fd(20, .{ .Varint = .Simple }, ?bool),
+        .java_string_check_utf8 = fd(27, .{ .Varint = .Simple }, ?bool),
+        .optimize_for = fd(9, .{ .Varint = .Simple }, ?OptimizeMode),
+        .go_package = fd(11, .String, ?[]const u8),
+        .cc_generic_services = fd(16, .{ .Varint = .Simple }, ?bool),
+        .java_generic_services = fd(17, .{ .Varint = .Simple }, ?bool),
+        .py_generic_services = fd(18, .{ .Varint = .Simple }, ?bool),
+        .php_generic_services = fd(42, .{ .Varint = .Simple }, ?bool),
+        .deprecated = fd(23, .{ .Varint = .Simple }, ?bool),
+        .cc_enable_arenas = fd(31, .{ .Varint = .Simple }, ?bool),
+        .objc_class_prefix = fd(36, .String, ?[]const u8),
+        .csharp_namespace = fd(37, .String, ?[]const u8),
+        .swift_prefix = fd(39, .String, ?[]const u8),
+        .php_class_prefix = fd(40, .String, ?[]const u8),
+        .php_namespace = fd(41, .String, ?[]const u8),
+        .php_metadata_namespace = fd(44, .String, ?[]const u8),
+        .ruby_package = fd(45, .String, ?[]const u8),
+        .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
     pub fn encode(self: FileOptions, allocator: Allocator) ![]u8 {
@@ -764,16 +764,16 @@ pub const MessageOptions = struct {
     //
     // Because this is an option, the above two restrictions are not enforced by
     // the protocol compiler.
-    message_set_wire_format: ?bool = null,
+    message_set_wire_format: ?bool,
     // Disables the generation of the standard "descriptor()" accessor, which can
     // conflict with a field of the same name.  This is meant to make migration
     // from proto1 easier; new code should avoid fields named "descriptor".
-    no_standard_descriptor_accessor: ?bool = null,
+    no_standard_descriptor_accessor: ?bool,
     // Is this message deprecated?
     // Depending on the target platform, this can emit Deprecated annotations
     // for the message, or it will be completely ignored; in the very least,
     // this is a formalization for deprecating messages.
-    deprecated: ?bool = null,
+    deprecated: ?bool,
     // NOTE: Do not set the option in .proto files. Always use the maps syntax
     // instead. The option should only be implicitly set by the proto compiler
     // parser.
@@ -795,7 +795,7 @@ pub const MessageOptions = struct {
     // use a native map in the target language to hold the keys and values.
     // The reflection APIs in such implementations still need to work as
     // if the field is a repeated message field.
-    map_entry: ?bool = null,
+    map_entry: ?bool,
     // Enable the legacy handling of JSON field name conflicts.  This lowercases
     // and strips underscored from the fields before comparison in proto3 only.
     // The new behavior takes `json_name` into account and applies to proto2 as
@@ -806,17 +806,17 @@ pub const MessageOptions = struct {
     //
     // TODO(b/261750190) This is legacy behavior we plan to remove once downstream
     // teams have had time to migrate.
-    deprecated_legacy_json_field_conflicts: ?bool = null,
+    deprecated_legacy_json_field_conflicts: ?bool,
     // The parser stores options it doesn't recognize here. See above.
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .message_set_wire_format = fd(1, .{ .Varint = .Simple }),
-        .no_standard_descriptor_accessor = fd(2, .{ .Varint = .Simple }),
-        .deprecated = fd(3, .{ .Varint = .Simple }),
-        .map_entry = fd(7, .{ .Varint = .Simple }),
-        .deprecated_legacy_json_field_conflicts = fd(11, .{ .Varint = .Simple }),
-        .uninterpreted_option = fd(999, .{ .List = .SubMessage }),
+        .message_set_wire_format = fd(1, .{ .Varint = .Simple }, ?bool),
+        .no_standard_descriptor_accessor = fd(2, .{ .Varint = .Simple }, ?bool),
+        .deprecated = fd(3, .{ .Varint = .Simple }, ?bool),
+        .map_entry = fd(7, .{ .Varint = .Simple }, ?bool),
+        .deprecated_legacy_json_field_conflicts = fd(11, .{ .Varint = .Simple }, ?bool),
+        .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
     pub fn encode(self: MessageOptions, allocator: Allocator) ![]u8 {
@@ -843,13 +843,13 @@ pub const FieldOptions = struct {
     // [ctype=CORD] and [ctype=STRING] (the default) on non-repeated fields of
     // type "bytes" in the open source release -- sorry, we'll try to include
     // other types in a future version!
-    ctype: ?CType = null,
+    ctype: ?CType,
     // The packed option can be enabled for repeated primitive fields to enable
     // a more efficient representation on the wire. Rather than repeatedly
     // writing the tag and type for each element, the entire array is encoded as
     // a single length-delimited blob. In proto3, only explicit setting it to
     // false will avoid using packed encoding.
-    @"packed": ?bool = null,
+    @"packed": ?bool,
     // The jstype option determines the JavaScript type used for values of the
     // field.  The option is permitted only for 64 bit integral and fixed types
     // (int64, uint64, sint64, fixed64, sfixed64).  A field with jstype JS_STRING
@@ -861,7 +861,7 @@ pub const FieldOptions = struct {
     //
     // This option is an enum to permit additional types to be added, e.g.
     // goog.math.Integer.
-    jstype: ?JSType = null,
+    jstype: ?JSType,
     // Should this field be parsed lazily?  Lazy applies only to message-type
     // fields.  It means that when the outer message is initially parsed, the
     // inner message's contents will not be parsed but instead stored in encoded
@@ -892,23 +892,23 @@ pub const FieldOptions = struct {
     //
     // As of May 2022, lazy verifies the contents of the byte stream during
     // parsing.  An invalid byte stream will cause the overall parsing to fail.
-    lazy: ?bool = null,
+    lazy: ?bool,
     // unverified_lazy does no correctness checks on the byte stream. This should
     // only be used where lazy with verification is prohibitive for performance
     // reasons.
-    unverified_lazy: ?bool = null,
+    unverified_lazy: ?bool,
     // Is this field deprecated?
     // Depending on the target platform, this can emit Deprecated annotations
     // for accessors, or it will be completely ignored; in the very least, this
     // is a formalization for deprecating fields.
-    deprecated: ?bool = null,
+    deprecated: ?bool,
     // For Google-internal migration only. Do not use.
-    weak: ?bool = null,
+    weak: ?bool,
     // Indicate that the field value should not be printed out when using debug
     // formats, e.g. when the field contains sensitive credentials.
-    debug_redact: ?bool = null,
-    retention: ?OptionRetention = null,
-    target: ?OptionTargetType = null,
+    debug_redact: ?bool,
+    retention: ?OptionRetention,
+    target: ?OptionTargetType,
     targets: ArrayList(OptionTargetType),
     // The parser stores options it doesn't recognize here. See above.
     uninterpreted_option: ArrayList(UninterpretedOption),
@@ -965,18 +965,18 @@ pub const FieldOptions = struct {
     };
 
     pub const _desc_table = .{
-        .ctype = fd(1, .{ .Varint = .ZigZagOptimized }),
-        .@"packed" = fd(2, .{ .Varint = .Simple }),
-        .jstype = fd(6, .{ .Varint = .ZigZagOptimized }),
-        .lazy = fd(5, .{ .Varint = .Simple }),
-        .unverified_lazy = fd(15, .{ .Varint = .Simple }),
-        .deprecated = fd(3, .{ .Varint = .Simple }),
-        .weak = fd(10, .{ .Varint = .Simple }),
-        .debug_redact = fd(16, .{ .Varint = .Simple }),
-        .retention = fd(17, .{ .Varint = .ZigZagOptimized }),
-        .target = fd(18, .{ .Varint = .ZigZagOptimized }),
-        .targets = fd(19, .{ .List = .{ .Varint = .ZigZagOptimized } }),
-        .uninterpreted_option = fd(999, .{ .List = .SubMessage }),
+        .ctype = fd(1, .{ .Varint = .Simple }, ?CType),
+        .@"packed" = fd(2, .{ .Varint = .Simple }, ?bool),
+        .jstype = fd(6, .{ .Varint = .Simple }, ?JSType),
+        .lazy = fd(5, .{ .Varint = .Simple }, ?bool),
+        .unverified_lazy = fd(15, .{ .Varint = .Simple }, ?bool),
+        .deprecated = fd(3, .{ .Varint = .Simple }, ?bool),
+        .weak = fd(10, .{ .Varint = .Simple }, ?bool),
+        .debug_redact = fd(16, .{ .Varint = .Simple }, ?bool),
+        .retention = fd(17, .{ .Varint = .Simple }, ?OptionRetention),
+        .target = fd(18, .{ .Varint = .Simple }, ?OptionTargetType),
+        .targets = fd(19, .{ .List = .{ .Varint = .Simple } }, ArrayList(OptionTargetType)),
+        .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
     pub fn encode(self: FieldOptions, allocator: Allocator) ![]u8 {
@@ -1001,7 +1001,7 @@ pub const OneofOptions = struct {
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .uninterpreted_option = fd(999, .{ .List = .SubMessage }),
+        .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
     pub fn encode(self: OneofOptions, allocator: Allocator) ![]u8 {
@@ -1024,27 +1024,27 @@ pub const OneofOptions = struct {
 pub const EnumOptions = struct {
     // Set this option to true to allow mapping different tag names to the same
     // value.
-    allow_alias: ?bool = null,
+    allow_alias: ?bool,
     // Is this enum deprecated?
     // Depending on the target platform, this can emit Deprecated annotations
     // for the enum, or it will be completely ignored; in the very least, this
     // is a formalization for deprecating enums.
-    deprecated: ?bool = null,
+    deprecated: ?bool,
     // Enable the legacy handling of JSON field name conflicts.  This lowercases
     // and strips underscored from the fields before comparison in proto3 only.
     // The new behavior takes `json_name` into account and applies to proto2 as
     // well.
     // TODO(b/261750190) Remove this legacy behavior once downstream teams have
     // had time to migrate.
-    deprecated_legacy_json_field_conflicts: ?bool = null,
+    deprecated_legacy_json_field_conflicts: ?bool,
     // The parser stores options it doesn't recognize here. See above.
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .allow_alias = fd(2, .{ .Varint = .Simple }),
-        .deprecated = fd(3, .{ .Varint = .Simple }),
-        .deprecated_legacy_json_field_conflicts = fd(6, .{ .Varint = .Simple }),
-        .uninterpreted_option = fd(999, .{ .List = .SubMessage }),
+        .allow_alias = fd(2, .{ .Varint = .Simple }, ?bool),
+        .deprecated = fd(3, .{ .Varint = .Simple }, ?bool),
+        .deprecated_legacy_json_field_conflicts = fd(6, .{ .Varint = .Simple }, ?bool),
+        .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
     pub fn encode(self: EnumOptions, allocator: Allocator) ![]u8 {
@@ -1069,13 +1069,13 @@ pub const EnumValueOptions = struct {
     // Depending on the target platform, this can emit Deprecated annotations
     // for the enum value, or it will be completely ignored; in the very least,
     // this is a formalization for deprecating enum values.
-    deprecated: ?bool = null,
+    deprecated: ?bool,
     // The parser stores options it doesn't recognize here. See above.
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .deprecated = fd(1, .{ .Varint = .Simple }),
-        .uninterpreted_option = fd(999, .{ .List = .SubMessage }),
+        .deprecated = fd(1, .{ .Varint = .Simple }, ?bool),
+        .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
     pub fn encode(self: EnumValueOptions, allocator: Allocator) ![]u8 {
@@ -1100,13 +1100,13 @@ pub const ServiceOptions = struct {
     // Depending on the target platform, this can emit Deprecated annotations
     // for the service, or it will be completely ignored; in the very least,
     // this is a formalization for deprecating services.
-    deprecated: ?bool = null,
+    deprecated: ?bool,
     // The parser stores options it doesn't recognize here. See above.
     uninterpreted_option: ArrayList(UninterpretedOption),
 
     pub const _desc_table = .{
-        .deprecated = fd(33, .{ .Varint = .Simple }),
-        .uninterpreted_option = fd(999, .{ .List = .SubMessage }),
+        .deprecated = fd(33, .{ .Varint = .Simple }, ?bool),
+        .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
     pub fn encode(self: ServiceOptions, allocator: Allocator) ![]u8 {
@@ -1131,8 +1131,8 @@ pub const MethodOptions = struct {
     // Depending on the target platform, this can emit Deprecated annotations
     // for the method, or it will be completely ignored; in the very least,
     // this is a formalization for deprecating methods.
-    deprecated: ?bool = null,
-    idempotency_level: ?IdempotencyLevel = null,
+    deprecated: ?bool,
+    idempotency_level: ?IdempotencyLevel,
     // The parser stores options it doesn't recognize here. See above.
     uninterpreted_option: ArrayList(UninterpretedOption),
     // Is this method side-effect-free (or safe in HTTP parlance), or idempotent,
@@ -1146,9 +1146,9 @@ pub const MethodOptions = struct {
     };
 
     pub const _desc_table = .{
-        .deprecated = fd(33, .{ .Varint = .Simple }),
-        .idempotency_level = fd(34, .{ .Varint = .ZigZagOptimized }),
-        .uninterpreted_option = fd(999, .{ .List = .SubMessage }),
+        .deprecated = fd(33, .{ .Varint = .Simple }, ?bool),
+        .idempotency_level = fd(34, .{ .Varint = .Simple }, ?IdempotencyLevel),
+        .uninterpreted_option = fd(999, .{ .List = .SubMessage }, ArrayList(UninterpretedOption)),
     };
 
     pub fn encode(self: MethodOptions, allocator: Allocator) ![]u8 {
@@ -1178,24 +1178,24 @@ pub const UninterpretedOption = struct {
     name: ArrayList(NamePart),
     // The value of the uninterpreted option, in whatever type the tokenizer
     // identified it as during parsing. Exactly one of these should be set.
-    identifier_value: ?[]const u8 = null,
-    positive_int_value: ?u64 = null,
-    negative_int_value: ?i64 = null,
-    double_value: ?f64 = null,
-    string_value: ?[]const u8 = null,
-    aggregate_value: ?[]const u8 = null,
+    identifier_value: ?[]const u8,
+    positive_int_value: ?u64,
+    negative_int_value: ?i64,
+    double_value: ?f64,
+    string_value: ?[]const u8,
+    aggregate_value: ?[]const u8,
     // The name of the uninterpreted option.  Each string represents a segment in
     // a dot-separated name.  is_extension is true iff a segment represents an
     // extension (denoted with parentheses in options specs in .proto files).
     // E.g.,{ ["foo", false], ["bar.baz", true], ["moo", false] } represents
     // "foo.(bar.baz).moo".
     pub const NamePart = struct {
-        name_part: ?[]const u8 = "",
-        is_extension: bool = false,
+        name_part: ?[]const u8,
+        is_extension: bool,
 
         pub const _desc_table = .{
-            .name_part = fd(1, .String),
-            .is_extension = fd(2, .{ .Varint = .Simple }),
+            .name_part = fd(1, .String, ?[]const u8),
+            .is_extension = fd(2, .{ .Varint = .Simple }, bool),
         };
 
         pub fn encode(self: NamePart, allocator: Allocator) ![]u8 {
@@ -1216,13 +1216,13 @@ pub const UninterpretedOption = struct {
     };
 
     pub const _desc_table = .{
-        .name = fd(2, .{ .List = .SubMessage }),
-        .identifier_value = fd(3, .String),
-        .positive_int_value = fd(4, .{ .Varint = .Simple }),
-        .negative_int_value = fd(5, .{ .Varint = .ZigZagOptimized }),
-        .double_value = fd(6, .FixedInt),
-        .string_value = fd(7, .String),
-        .aggregate_value = fd(8, .String),
+        .name = fd(2, .{ .List = .SubMessage }, ArrayList(NamePart)),
+        .identifier_value = fd(3, .String, ?[]const u8),
+        .positive_int_value = fd(4, .{ .Varint = .Simple }, ?u64),
+        .negative_int_value = fd(5, .FixedInt, ?i64),
+        .double_value = fd(6, .FixedInt, ?f64),
+        .string_value = fd(7, .String, ?[]const u8),
+        .aggregate_value = fd(8, .String, ?[]const u8),
     };
 
     pub fn encode(self: UninterpretedOption, allocator: Allocator) ![]u8 {
@@ -1367,16 +1367,16 @@ pub const SourceCodeInfo = struct {
         //   optional int32 grault = 6;
         //
         //   // ignored detached comments.
-        leading_comments: ?[]const u8 = null,
-        trailing_comments: ?[]const u8 = null,
+        leading_comments: ?[]const u8,
+        trailing_comments: ?[]const u8,
         leading_detached_comments: ArrayList([]const u8),
 
         pub const _desc_table = .{
-            .path = fd(1, .{ .List = .{ .Varint = .Simple } }),
-            .span = fd(2, .{ .List = .{ .Varint = .Simple } }),
-            .leading_comments = fd(3, .String),
-            .trailing_comments = fd(4, .String),
-            .leading_detached_comments = fd(6, .{ .List = .String }),
+            .path = fd(1, .{ .PackedList = .{ .Varint = .Simple } }, ArrayList(i32)),
+            .span = fd(2, .{ .PackedList = .{ .Varint = .Simple } }, ArrayList(i32)),
+            .leading_comments = fd(3, .String, ?[]const u8),
+            .trailing_comments = fd(4, .String, ?[]const u8),
+            .leading_detached_comments = fd(6, .{ .List = .String }, ArrayList([]const u8)),
         };
 
         pub fn encode(self: Location, allocator: Allocator) ![]u8 {
@@ -1397,7 +1397,7 @@ pub const SourceCodeInfo = struct {
     };
 
     pub const _desc_table = .{
-        .location = fd(1, .{ .List = .SubMessage }),
+        .location = fd(1, .{ .List = .SubMessage }, ArrayList(Location)),
     };
 
     pub fn encode(self: SourceCodeInfo, allocator: Allocator) ![]u8 {
@@ -1429,15 +1429,15 @@ pub const GeneratedCodeInfo = struct {
         // is formatted the same as SourceCodeInfo.Location.path.
         path: ArrayList(i32),
         // Identifies the filesystem path to the original source .proto.
-        source_file: ?[]const u8 = null,
+        source_file: ?[]const u8,
         // Identifies the starting offset in bytes in the generated code
         // that relates to the identified object.
-        begin: ?i32 = null,
+        begin: ?i32,
         // Identifies the ending offset in bytes in the generated code that
         // relates to the identified object. The end offset should be one past
         // the last relevant byte (so the length of the text = end - begin).
-        end: ?i32 = null,
-        semantic: ?Semantic = null,
+        end: ?i32,
+        semantic: ?Semantic,
         // Represents the identified object's effect on the element in the original
         // .proto file.
         pub const Semantic = enum(i32) {
@@ -1451,11 +1451,11 @@ pub const GeneratedCodeInfo = struct {
         };
 
         pub const _desc_table = .{
-            .path = fd(1, .{ .List = .{ .Varint = .Simple } }),
-            .source_file = fd(2, .String),
-            .begin = fd(3, .{ .Varint = .Simple }),
-            .end = fd(4, .{ .Varint = .Simple }),
-            .semantic = fd(5, .{ .Varint = .ZigZagOptimized }),
+            .path = fd(1, .{ .PackedList = .{ .Varint = .Simple } }, ArrayList(i32)),
+            .source_file = fd(2, .String, ?[]const u8),
+            .begin = fd(3, .{ .Varint = .Simple }, ?i32),
+            .end = fd(4, .{ .Varint = .Simple }, ?i32),
+            .semantic = fd(5, .{ .Varint = .Simple }, ?Semantic),
         };
 
         pub fn encode(self: Annotation, allocator: Allocator) ![]u8 {
@@ -1476,7 +1476,7 @@ pub const GeneratedCodeInfo = struct {
     };
 
     pub const _desc_table = .{
-        .annotation = fd(1, .{ .List = .SubMessage }),
+        .annotation = fd(1, .{ .List = .SubMessage }, ArrayList(Annotation)),
     };
 
     pub fn encode(self: GeneratedCodeInfo, allocator: Allocator) ![]u8 {

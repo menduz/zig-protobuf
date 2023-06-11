@@ -723,7 +723,7 @@ fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type
     switch (list_type) {
         .FixedInt => {
             switch (T) {
-                u8 => try array.appendSlice(input, 1),
+                u8 => try array.appendSlice(input),
                 u16, i16, u32, i32, u64, i64, f32, f64 => {
                     var fixed_iterator = FixedDecoderIterator(T){ .input = input };
                     while (fixed_iterator.next()) |value| {
@@ -841,15 +841,14 @@ pub fn pb_decode(comptime T: type, input: []const u8, allocator: Allocator) !T {
     var iterator = WireDecoderIterator{ .input = input };
 
     while (try iterator.next()) |extracted_data| {
-        if (extracted_data.data == .Slice) {} else {}
         inline for (@typeInfo(T).Struct.fields) |field| {
             const v = @field(T._desc_table, field.name);
             if (is_tag_known(v, extracted_data)) {
                 break try decode_data(T, v, field, &result, extracted_data, allocator);
             }
         } else {
-            if (extracted_data.data == .Slice) {} else {}
-            @panic("unknown field");
+            std.debug.print("Unknown field {any}", .{extracted_data});
+            // @panic("unknown field");
         }
     }
 

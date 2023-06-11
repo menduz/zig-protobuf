@@ -90,6 +90,12 @@ pub fn build(b: *std.build.Builder) void {
             .target = target,
             .optimize = optimize,
         }),
+        b.addTest(.{
+            .name = "FullName",
+            .root_source_file = .{ .path = "bootstrapped-generator/FullName.zig" },
+            .target = target,
+            .optimize = optimize,
+        }),
     };
 
     const test_step = b.step("test", "Run library tests");
