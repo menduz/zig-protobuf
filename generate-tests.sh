@@ -6,8 +6,7 @@ mkdir -p tests/generated || true
 protoc --plugin=zig-out/bin/protoc-gen-zig \
   --zig_out=tests/generated \
   -Itests/protos_for_test \
-  tests/protos_for_test/fixedsizes.proto \
-  tests/protos_for_test/varints.proto
+  tests/protos_for_test/all.proto
 
 zig fmt tests/generated/tests.pb.zig
 

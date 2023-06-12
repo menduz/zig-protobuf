@@ -71,3 +71,229 @@ pub const Varints = struct {
         return pb_deinit(self);
     }
 };
+
+pub const TopLevelEnum = enum(i32) {
+    SE_ZERO = 0,
+    SE2_ZERO = 3,
+    SE2_ONE = 4,
+    _,
+};
+
+pub const WithEnum = struct {
+    value: ?SomeEnum,
+
+    pub const _desc_table = .{
+        .value = fd(1, .{ .Varint = .Simple }),
+    };
+
+    pub const SomeEnum = enum(i32) {
+        SE_ZERO = 0,
+        SE_ONE = 1,
+        A = 3,
+        B = 4,
+        _,
+    };
+
+    pub fn encode(self: WithEnum, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) !WithEnum {
+        return pb_decode(WithEnum, input, allocator);
+    }
+    pub fn init(allocator: Allocator) WithEnum {
+        return pb_init(WithEnum, allocator);
+    }
+    pub fn deinit(self: WithEnum) void {
+        return pb_deinit(self);
+    }
+};
+
+pub const WithEnumShadow = struct {
+    value: ?SomeEnum,
+
+    pub const _desc_table = .{
+        .value = fd(1, .{ .Varint = .Simple }),
+    };
+
+    pub const SomeEnum = enum(i32) {
+        SE_ZERO = 0,
+        SE2_ZERO = 3,
+        SE2_ONE = 4,
+        _,
+    };
+
+    pub fn encode(self: WithEnumShadow, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) !WithEnumShadow {
+        return pb_decode(WithEnumShadow, input, allocator);
+    }
+    pub fn init(allocator: Allocator) WithEnumShadow {
+        return pb_init(WithEnumShadow, allocator);
+    }
+    pub fn deinit(self: WithEnumShadow) void {
+        return pb_deinit(self);
+    }
+};
+
+pub const RepeatedEnum = struct {
+    value: ArrayList(TopLevelEnum),
+
+    pub const _desc_table = .{
+        .value = fd(1, .{ .List = .{ .Varint = .Simple } }),
+    };
+
+    pub fn encode(self: RepeatedEnum, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) !RepeatedEnum {
+        return pb_decode(RepeatedEnum, input, allocator);
+    }
+    pub fn init(allocator: Allocator) RepeatedEnum {
+        return pb_init(RepeatedEnum, allocator);
+    }
+    pub fn deinit(self: RepeatedEnum) void {
+        return pb_deinit(self);
+    }
+};
+
+pub const Packed = struct {
+    int32_list: ArrayList(i32),
+    uint32_list: ArrayList(u32),
+    sint32_list: ArrayList(i32),
+    float_list: ArrayList(f32),
+    double_list: ArrayList(f64),
+    int64_list: ArrayList(i64),
+    sint64_list: ArrayList(i64),
+    uint64_list: ArrayList(u64),
+    bool_list: ArrayList(bool),
+    enum_list: ArrayList(TopLevelEnum),
+
+    pub const _desc_table = .{
+        .int32_list = fd(1, .{ .PackedList = .{ .Varint = .Simple } }),
+        .uint32_list = fd(2, .{ .PackedList = .{ .Varint = .Simple } }),
+        .sint32_list = fd(3, .{ .PackedList = .{ .Varint = .ZigZagOptimized } }),
+        .float_list = fd(4, .{ .PackedList = .{ .FixedInt = .I32 } }),
+        .double_list = fd(5, .{ .PackedList = .{ .FixedInt = .I64 } }),
+        .int64_list = fd(6, .{ .PackedList = .{ .Varint = .Simple } }),
+        .sint64_list = fd(7, .{ .PackedList = .{ .Varint = .ZigZagOptimized } }),
+        .uint64_list = fd(8, .{ .PackedList = .{ .Varint = .Simple } }),
+        .bool_list = fd(9, .{ .PackedList = .{ .Varint = .Simple } }),
+        .enum_list = fd(10, .{ .PackedList = .{ .Varint = .Simple } }),
+    };
+
+    pub fn encode(self: Packed, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) !Packed {
+        return pb_decode(Packed, input, allocator);
+    }
+    pub fn init(allocator: Allocator) Packed {
+        return pb_init(Packed, allocator);
+    }
+    pub fn deinit(self: Packed) void {
+        return pb_deinit(self);
+    }
+};
+
+pub const UnPacked = struct {
+    int32_list: ArrayList(i32),
+    uint32_list: ArrayList(u32),
+    sint32_list: ArrayList(i32),
+    float_list: ArrayList(f32),
+    double_list: ArrayList(f64),
+    int64_list: ArrayList(i64),
+    sint64_list: ArrayList(i64),
+    uint64_list: ArrayList(u64),
+    bool_list: ArrayList(bool),
+    enum_list: ArrayList(TopLevelEnum),
+
+    pub const _desc_table = .{
+        .int32_list = fd(1, .{ .List = .{ .Varint = .Simple } }),
+        .uint32_list = fd(2, .{ .List = .{ .Varint = .Simple } }),
+        .sint32_list = fd(3, .{ .List = .{ .Varint = .ZigZagOptimized } }),
+        .float_list = fd(4, .{ .List = .{ .FixedInt = .I32 } }),
+        .double_list = fd(5, .{ .List = .{ .FixedInt = .I64 } }),
+        .int64_list = fd(6, .{ .List = .{ .Varint = .Simple } }),
+        .sint64_list = fd(7, .{ .List = .{ .Varint = .ZigZagOptimized } }),
+        .uint64_list = fd(8, .{ .List = .{ .Varint = .Simple } }),
+        .bool_list = fd(9, .{ .List = .{ .Varint = .Simple } }),
+        .enum_list = fd(10, .{ .List = .{ .Varint = .Simple } }),
+    };
+
+    pub fn encode(self: UnPacked, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) !UnPacked {
+        return pb_decode(UnPacked, input, allocator);
+    }
+    pub fn init(allocator: Allocator) UnPacked {
+        return pb_init(UnPacked, allocator);
+    }
+    pub fn deinit(self: UnPacked) void {
+        return pb_deinit(self);
+    }
+};
+
+pub const WithSubmessages = struct {
+    with_enum: ?WithEnum,
+
+    pub const _desc_table = .{
+        .with_enum = fd(1, .{ .SubMessage = {} }),
+    };
+
+    pub fn encode(self: WithSubmessages, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) !WithSubmessages {
+        return pb_decode(WithSubmessages, input, allocator);
+    }
+    pub fn init(allocator: Allocator) WithSubmessages {
+        return pb_init(WithSubmessages, allocator);
+    }
+    pub fn deinit(self: WithSubmessages) void {
+        return pb_deinit(self);
+    }
+};
+
+pub const WithStrings = struct {
+    name: ?[]const u8,
+
+    pub const _desc_table = .{
+        .name = fd(1, .String),
+    };
+
+    pub fn encode(self: WithStrings, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) !WithStrings {
+        return pb_decode(WithStrings, input, allocator);
+    }
+    pub fn init(allocator: Allocator) WithStrings {
+        return pb_init(WithStrings, allocator);
+    }
+    pub fn deinit(self: WithStrings) void {
+        return pb_deinit(self);
+    }
+};
+
+pub const WithRepeatedStrings = struct {
+    name: ArrayList([]const u8),
+
+    pub const _desc_table = .{
+        .name = fd(1, .{ .List = .String }),
+    };
+
+    pub fn encode(self: WithRepeatedStrings, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) !WithRepeatedStrings {
+        return pb_decode(WithRepeatedStrings, input, allocator);
+    }
+    pub fn init(allocator: Allocator) WithRepeatedStrings {
+        return pb_init(WithRepeatedStrings, allocator);
+    }
+    pub fn deinit(self: WithRepeatedStrings) void {
+        return pb_deinit(self);
+    }
+};

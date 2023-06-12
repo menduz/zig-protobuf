@@ -55,12 +55,6 @@ pub fn build(b: *std.build.Builder) void {
             .optimize = optimize,
         }),
         b.addTest(.{
-            .name = "generated",
-            .root_source_file = .{ .path = "tests/generated.zig" },
-            .target = target,
-            .optimize = optimize,
-        }),
-        b.addTest(.{
             .name = "tests",
             .root_source_file = .{ .path = "src/tests.zig" },
             .target = target,

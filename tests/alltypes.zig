@@ -1,105 +1,53 @@
 const std = @import("std");
+const testing = std.testing;
+
 const protobuf = @import("protobuf");
-const ArrayList = std.ArrayList;
-const FieldDescriptor = protobuf.FieldDescriptor;
-const mem = std.mem;
-const pb_decode = protobuf.pb_decode;
-const pb_encode = protobuf.pb_encode;
-const pb_deinit = protobuf.pb_deinit;
-const pb_init = protobuf.pb_init;
-const fd = protobuf.fd;
+const tests = @import("./generated/tests.pb.zig");
 
-const expected = @embedFile("encode_alltypes.output");
-
-const SubMessage = struct {
-    substuff1: ArrayList(u32),
-    substuff2: ?i32,
-    substuff3: ?i32,
-
-    pub const _desc_table = .{
-        .substuff1 = fd(1, .{ .List = .{ .FixedInt = .I64 } }),
-        .substuff2 = fd(2, .{ .Varint = .Simple }),
-        .substuff3 = fd(3, .FixedInt),
-    };
-
-    pub fn encode(self: SubMessage, allocator: *mem.Allocator) ![]u8 {
-        return pb_encode(self, allocator);
+pub fn printAllDecoded(input: []const u8) !void {
+    var iterator = protobuf.WireDecoderIterator{ .input = input };
+    std.debug.print("Decoding: {s}\n", .{std.fmt.fmtSliceHexUpper(input)});
+    while (try iterator.next()) |extracted_data| {
+        std.debug.print("  {any}\n", .{extracted_data});
     }
+}
 
-    pub fn deinit(self: SubMessage) void {
-        pb_deinit(self);
-    }
+test "packed int32_list" {
+    var demo = tests.Packed.init(testing.allocator);
+    try demo.int32_list.append(0x01);
+    try demo.int32_list.append(0x02);
+    try demo.int32_list.append(0x03);
+    try demo.int32_list.append(0x04);
+    defer demo.deinit();
 
-    pub fn init(allocator: *mem.Allocator) SubMessage {
-        return pb_init(SubMessage, allocator);
-    }
-};
+    const obtained = try demo.encode(testing.allocator);
+    defer testing.allocator.free(obtained);
 
-const EmptyMessage = struct {
-    pub const _desc_table = [_]FieldDescriptor{};
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x0A, 0x04, 0x01, 0x02, 0x03, 0x04 }, obtained);
 
-    pub fn encode(self: EmptyMessage, allocator: *mem.Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
+    const decoded = try tests.Packed.decode(obtained, testing.allocator);
+    defer decoded.deinit();
+    try testing.expectEqualSlices(i32, demo.int32_list.items, decoded.int32_list.items);
 
-    pub fn deinit(self: EmptyMessage) void {
-        pb_deinit(self);
-    }
+    // TODO: cross test against Packed type
+}
 
-    pub fn init(allocator: *mem.Allocator) EmptyMessage {
-        return pb_init(EmptyMessage, allocator);
-    }
-};
+test "unpacked int32_list" {
+    var demo = tests.UnPacked.init(testing.allocator);
+    try demo.int32_list.append(0x01);
+    try demo.int32_list.append(0x02);
+    try demo.int32_list.append(0x03);
+    try demo.int32_list.append(0x04);
+    defer demo.deinit();
 
-const HugeEnum = enum(i32) { HE_Zero = 0, Negative = -2147483647, Positive = 2147483647 };
+    const obtained = try demo.encode(testing.allocator);
+    defer testing.allocator.free(obtained);
 
-const Limits = struct {
-    int32_min: ?i32,
-    int32_max: ?i32,
-    uint32_min: ?u32,
-    uint32_max: ?u32,
-    int64_min: ?i64,
-    int64_max: ?i64,
-    uint64_min: ?u64,
-    uint64_max: ?u64,
-    enum_min: ?HugeEnum,
-    enum_max: ?HugeEnum,
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x08, 0x01, 0x08, 0x02, 0x08, 0x03, 0x08, 0x04 }, obtained);
 
-    pub const _desc_table = [_]FieldDescriptor{
-        fd(1, "int32_min", .{ .Varint = .ZigZagOptimized }),
-        fd(2, "int32_max", .{ .Varint = .ZigZagOptimized }),
-        fd(3, "uint32_min", .{ .Varint = .Simple }),
-        fd(4, "uint32_max", .{ .Varint = .Simple }),
-        fd(5, "int64_min", .{ .Varint = .ZigZagOptimized }),
-        fd(6, "int64_max", .{ .Varint = .ZigZagOptimized }),
-        fd(7, "uint64_min", .{ .Varint = .Simple }),
-        fd(8, "uint64_max", .{ .Varint = .Simple }),
-        fd(9, "enum_min", .{ .Varint = .ZigZagOptimized }),
-        fd(10, "enum_max", .{ .Varint = .ZigZagOptimized }),
-    };
+    const decoded = try tests.UnPacked.decode(obtained, testing.allocator);
+    defer decoded.deinit();
+    try testing.expectEqualSlices(i32, demo.int32_list.items, decoded.int32_list.items);
 
-    pub fn encode(self: Limits, allocator: *mem.Allocator) ![]u8 {
-        return pb_encode(self, allocator);
-    }
-
-    pub fn deinit(self: Limits) void {
-        pb_deinit(self);
-    }
-
-    pub fn init(allocator: *mem.Allocator) Limits {
-        return pb_init(Limits, allocator);
-    }
-};
-
-const MyEnum = enum(type) {
-    Zero = 0,
-    First = 1,
-    Second = 2,
-    Truth = 42,
-};
-
-const AllTypes = struct {};
-
-test "alltypes " {
-    //todo!
+    // TODO: cross test against Packed type
 }

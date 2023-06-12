@@ -261,11 +261,13 @@ fn append_list_of_fixed(pb: *ArrayList(u8), value: anytype) !void {
 }
 
 /// Appends a list of varint to the pb buffer.
-fn append_list_of_varint(pb: *ArrayList(u8), comptime field: FieldDescriptor, value_list: anytype, comptime varint_type: VarintType) !void {
+fn append_list_of_varint(pb: *ArrayList(u8), value_list: anytype, comptime varint_type: VarintType) !void {
+    const len_index = pb.items.len;
     for (value_list.items) |item| {
-        try append_tag(pb, field);
         try append_varint(pb, item, varint_type);
     }
+    const size_encoded = pb.items.len - len_index;
+    try insert_raw_varint(pb, size_encoded, len_index);
 }
 
 /// Appends a list of submessages to the pb_buffer.
@@ -361,24 +363,18 @@ fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, value: anytype) !
             try append_tag(pb, field);
             try append_const_bytes(pb, value);
         },
-        .PackedList => |_| {
-            try append_tag(pb, field);
-            // switch (list_type) {
-            //     .FixedInt => {
-            //         try append_tag(pb, field);
-            //         try append_list_of_fixed(pb, value);
-            //     },
-            //     .SubMessage => {
-            //         try append_list_of_submessages(pb, field, value);
-            //     },
-            //     .String => {
-            //         try append_list_of_strings(pb, field, value);
-            //     },
-            //     .Varint => |varint_type| {
-            //         try append_list_of_varint(pb, field, value, varint_type);
-            //     },
-            // }
-            @panic(".PackedList append not implemented");
+        .PackedList => |list_type| {
+            switch (list_type) {
+                .FixedInt => {
+                    try append_tag(pb, field);
+                    try append_list_of_fixed(pb, value);
+                },
+                .Varint => |varint_type| {
+                    try append_tag(pb, field);
+                    try append_list_of_varint(pb, value, varint_type);
+                },
+                else => @panic(".PackedList only implemented for FixedInt and Varint"),
+            }
         },
         .List => |list_type| {
             switch (list_type) {
@@ -508,16 +504,13 @@ fn deinit_field(field: anytype, comptime field_name: []const u8, comptime ftype:
         .SubMessage => {
             @field(field, field_name).deinit();
         },
-        .List => |list_type| {
+        .List, .PackedList => |list_type| {
             if (list_type == .SubMessage) {
                 for (@field(field, field_name).items) |item| {
                     item.deinit();
                 }
             }
             @field(field, field_name).deinit();
-        },
-        .PackedList => {
-            @panic("deinit PackedList not implemented");
         },
         .String => {
             // nothing?
@@ -669,6 +662,15 @@ fn VarintDecoderIterator(comptime T: type, comptime varint_type: VarintType) typ
     };
 }
 
+test "VarintDecoderIterator" {
+    var demo = VarintDecoderIterator(u64, .Simple){ .input = "\x01\x02\x03\x04" };
+    try testing.expectEqual(demo.next(), 1);
+    try testing.expectEqual(demo.next(), 2);
+    try testing.expectEqual(demo.next(), 3);
+    try testing.expectEqual(demo.next(), 4);
+    try testing.expectEqual(demo.next(), null);
+}
+
 fn SubmessageDecoderIterator(comptime T: type) type {
     return struct {
         const Self = @This();
@@ -808,7 +810,7 @@ fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type
 fn decode_packed_list(input: []const u8, comptime list_type: ListType, comptime T: type, array: *ArrayList(T), allocator: Allocator) Allocator.Error!void {
     _ = allocator;
     const length = decode_varint(u64, input);
-    const newSlice = input[length.size..];
+    const newSlice = input[length.size - 1 ..];
 
     switch (list_type) {
         .FixedInt => {
