@@ -3,6 +3,7 @@ const testing = std.testing;
 
 const protobuf = @import("protobuf");
 const tests = @import("./generated/tests.pb.zig");
+const longName = @import("./generated/some/really/long/name/which/does/not/really/make/any/sense/but/sometimes/we/still/see/stuff/like/this.pb.zig");
 
 pub fn printAllDecoded(input: []const u8) !void {
     var iterator = protobuf.WireDecoderIterator{ .input = input };
@@ -10,6 +11,17 @@ pub fn printAllDecoded(input: []const u8) !void {
     while (try iterator.next()) |extracted_data| {
         std.debug.print("  {any}\n", .{extracted_data});
     }
+}
+
+test "long name" {
+    // - this test allocates an object only. used to instruct zig to try to compile the file
+    // - it also ensures that SubMessage deinit() works
+    var demo = longName.WouldYouParseThisForMePlease.init(testing.allocator);
+    demo.field = .{ .field = "asd" };
+    defer demo.deinit();
+
+    const obtained = try demo.encode(testing.allocator);
+    defer testing.allocator.free(obtained);
 }
 
 test "packed int32_list" {

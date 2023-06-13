@@ -502,7 +502,7 @@ fn deinit_field(field: anytype, comptime field_name: []const u8, comptime ftype:
     switch (ftype) {
         .Varint, .FixedInt => {},
         .SubMessage => {
-            @field(field, field_name).deinit();
+            @field(field, field_name).?.deinit();
         },
         .List, .PackedList => |list_type| {
             if (list_type == .SubMessage) {

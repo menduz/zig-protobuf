@@ -69,6 +69,8 @@ const GenerationContext = struct {
             try self.res.file.append(ret);
         }
 
+        self.res.supported_features = @enumToInt(plugin.CodeGeneratorResponse.Feature.FEATURE_PROTO3_OPTIONAL);
+
         const r = try self.res.encode(allocator);
         _ = try stdout.write(r);
     }
@@ -275,7 +277,9 @@ const GenerationContext = struct {
     }
 
     fn isOptional(_: *Self, field: descriptor.FieldDescriptorProto) bool {
-        if (field.label) |l| {
+        if (field.proto3_optional == true) {
+            return true;
+        } else if (field.label) |l| {
             return l == .LABEL_OPTIONAL;
         } else {
             return false;

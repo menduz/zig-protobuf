@@ -6,7 +6,9 @@ mkdir -p tests/generated || true
 protoc --plugin=zig-out/bin/protoc-gen-zig \
   --zig_out=tests/generated \
   -Itests/protos_for_test \
-  tests/protos_for_test/all.proto
+  --experimental_allow_proto3_optional \
+  tests/protos_for_test/all.proto \
+  tests/protos_for_test/whitespace-in-name.proto
 
 zig fmt tests/generated/tests.pb.zig
 zig fmt tests/generated/vector_tile.pb.zig
