@@ -9,5 +9,6 @@ protoc --plugin=zig-out/bin/protoc-gen-zig \
   tests/protos_for_test/all.proto
 
 zig fmt tests/generated/tests.pb.zig
+zig fmt tests/generated/vector_tile.pb.zig
 
 echo 'generate-tests.sh finished'

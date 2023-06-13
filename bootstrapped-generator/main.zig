@@ -215,11 +215,21 @@ const GenerationContext = struct {
             }
 
             var parent: ?FullName = fullTypeName.parent();
+            const filePackage = FullName{ .buf = file.package.? };
 
+            // iterate parents until we find a parent that matches the known_packages
             while (parent != null) {
                 var it = ctx.known_packages.valueIterator();
 
                 while (it.next()) |value| {
+
+                    // it is in current package, return full name
+                    if (filePackage.eql(parent.?)) {
+                        const name = fullTypeName.buf[parent.?.buf.len + 1 ..];
+                        return name;
+                    }
+
+                    // it is in different package. return fully qualified name including accessor
                     if (value.eql(parent.?)) {
                         const prop = try ctx.escapeFqn(parent.?.buf);
                         const name = fullTypeName.buf[prop.len + 1 ..];

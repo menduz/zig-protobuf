@@ -3,6 +3,7 @@ package tests;
 
 import public "fixedsizes.proto";
 import public "varints.proto";
+import public "mapbox.proto";
 
 enum TopLevelEnum {
   SE_ZERO = 0;

@@ -11,6 +11,8 @@ const pb_encode = protobuf.pb_encode;
 const pb_deinit = protobuf.pb_deinit;
 const pb_init = protobuf.pb_init;
 const fd = protobuf.fd;
+/// import package vector_tile
+const vector_tile = @import("vector_tile.pb.zig");
 
 pub const FixedSizes = struct {
     sfixed64: ?i64,
