@@ -11,9 +11,7 @@ const ArrayList = std.ArrayList;
 /// Type of encoding for a Varint value.
 const VarintType = enum { Simple, ZigZagOptimized };
 
-const DecodingError = error{
-    NotEnoughData,
-};
+const DecodingError = error{ NotEnoughData, InvalidInput };
 
 const UnionDecodingError = DecodingError || Allocator.Error;
 
@@ -30,9 +28,6 @@ pub const ListTypeTag = enum {
     SubMessage,
 };
 
-/// Enum describing the content type of a repeated field.
-pub const PackedListTypeTag = enum { Varint, FixedInt, String };
-
 /// Tagged union for repeated fields, giving the details of the underlying type.
 pub const ListType = union(ListTypeTag) {
     Varint: VarintType,
@@ -40,9 +35,6 @@ pub const ListType = union(ListTypeTag) {
     FixedInt: TagNumber,
     SubMessage,
 };
-
-/// Tagged union for repeated packed fields, giving the details of the underlying type.
-pub const PackedListType = union(PackedListTypeTag) { Varint: VarintType, FixedInt: TagNumber, String };
 
 /// Enum describing the details of keys or values for a map type.
 pub const KeyValueTypeTag = enum {
@@ -86,7 +78,7 @@ pub const FieldType = union(FieldTypeTag) {
     SubMessage,
     String,
     List: ListType,
-    PackedList: PackedListType,
+    PackedList: ListType,
     OneOf: type,
     Map: MapData,
 
@@ -123,18 +115,18 @@ pub const FieldType = union(FieldTypeTag) {
 /// Structure describing a field. Most of the relevant informations are
 /// In the FieldType data. Tag is optional as OneOf fields are "virtual" fields.
 pub const FieldDescriptor = struct {
-    fieldNumber: ?u32,
+    field_number: ?u32,
     tag: ?u32,
     ftype: FieldType,
 };
 
 /// Helper function to build a FieldDescriptor. Makes code clearer, mostly.
-pub fn fd(comptime fieldNumber: ?u32, comptime ftype: FieldType) FieldDescriptor {
+pub fn fd(comptime field_number: ?u32, comptime ftype: FieldType) FieldDescriptor {
     // calculates the comptime value of (tag_index << 3) + wire type.
     // This is fully calculated at comptime which is great.
-    const tag: ?u32 = if (fieldNumber) |num| ((num << 3) | ftype.get_wirevalue()) else null;
+    const tag: ?u32 = if (field_number) |num| ((num << 3) | ftype.get_wirevalue()) else null;
 
-    return FieldDescriptor{ .fieldNumber = fieldNumber, .ftype = ftype, .tag = tag };
+    return FieldDescriptor{ .field_number = field_number, .ftype = ftype, .tag = tag };
 }
 
 // encoding
@@ -201,7 +193,7 @@ fn append_as_varint(pb: *ArrayList(u8), int: anytype, comptime varint_type: Vari
 fn append_varint(pb: *ArrayList(u8), value: anytype, comptime varint_type: VarintType) !void {
     switch (@typeInfo(@TypeOf(value))) {
         .Enum => try append_as_varint(pb, @as(i32, @enumToInt(value)), varint_type),
-        .Bool => try append_as_varint(pb, @as(u8, @boolToInt(value)), varint_type),
+        .Bool => try append_as_varint(pb, @as(u8, if (value) 1 else 0), varint_type),
         else => try append_as_varint(pb, value, varint_type),
     }
 }
@@ -388,6 +380,10 @@ fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, value: anytype) !
                 .String => |varint_type| {
                     try append_packed_list_of_strings(pb, value, varint_type);
                 },
+                .SubMessage => {
+                    // submessages are not suitable for PackedLists
+                    return error.InvalidInput;
+                },
             }
         },
         .List => |list_type| {
@@ -513,7 +509,9 @@ fn deinit_field(field: anytype, comptime field_name: []const u8, comptime ftype:
     switch (ftype) {
         .Varint, .FixedInt => {},
         .SubMessage => {
-            @field(field, field_name).?.deinit();
+            if (@field(field, field_name)) |submessage| {
+                submessage.deinit();
+            }
         },
         .List => |list_type| {
             if (list_type == .SubMessage) {
@@ -560,7 +558,7 @@ const ExtractedData = union(ExtractedDataTag) { RawValue: u64, Slice: []const u8
 
 /// Unit of extracted data from a stream
 /// Please not that "tag" is supposed to be the full tag. See get_full_tag_value.
-const Extracted = struct { tag: u32, fieldNumber: u32, data: ExtractedData };
+const Extracted = struct { tag: u32, field_number: u32, data: ExtractedData };
 
 /// Decoded varint value generic type
 fn DecodedVarint(comptime T: type) type {
@@ -615,34 +613,9 @@ fn decode_fixed(comptime T: type, slice: []const u8) T {
 fn decode_fixed_raw(comptime T: type, value: u64) T {
     return switch (T) {
         f32, u32, i32 => @bitCast(T, @intCast(u32, value)),
+        bool => value != 0,
         else => @bitCast(T, value),
     };
-}
-
-test "decode fixed" {
-    const u_32 = [_]u8{ 2, 0, 0, 0 };
-    const u_32_result: u32 = 2;
-    try testing.expectEqual(u_32_result, decode_fixed(u32, &u_32));
-
-    const u_64 = [_]u8{ 1, 0, 0, 0, 0, 0, 0, 0 };
-    const u_64_result: u64 = 1;
-    try testing.expectEqual(u_64_result, decode_fixed(u64, &u_64));
-
-    const i_32 = [_]u8{ 0xFF, 0xFF, 0xFF, 0xFF };
-    const i_32_result: i32 = -1;
-    try testing.expectEqual(i_32_result, decode_fixed(i32, &i_32));
-
-    const i_64 = [_]u8{ 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
-    const i_64_result: i64 = -2;
-    try testing.expectEqual(i_64_result, decode_fixed(i64, &i_64));
-
-    const f_32 = [_]u8{ 0x00, 0x00, 0xa0, 0x40 };
-    const f_32_result: f32 = 5.0;
-    try testing.expectEqual(f_32_result, decode_fixed(f32, &f_32));
-
-    const f_64 = [_]u8{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x40 };
-    const f_64_result: f64 = 5.0;
-    try testing.expectEqual(f_64_result, decode_fixed(f64, &f_64));
 }
 
 fn FixedDecoderIterator(comptime T: type) type {
@@ -692,6 +665,9 @@ const LengthDelimitedDecoderIterator = struct {
             const size = try decode_varint(u64, self.input[self.current_index..]);
             self.current_index += size.size;
             defer self.current_index += size.value;
+
+            if (self.current_index > self.input.len or (self.current_index + size.value) > self.input.len) return error.NotEnoughData;
+
             return self.input[self.current_index .. self.current_index + size.value];
         }
         return null;
@@ -748,7 +724,7 @@ pub const WireDecoderIterator = struct {
                 },
             };
 
-            return Extracted{ .tag = tag_and_wire.value, .data = data, .fieldNumber = tag_and_wire.value >> 3 };
+            return Extracted{ .tag = tag_and_wire.value, .data = data, .field_number = tag_and_wire.value >> 3 };
         } else {
             return null;
         }
@@ -769,7 +745,7 @@ fn get_varint_value(comptime T: type, comptime varint_type: VarintType, raw: u64
                 i32, i64 => @bitCast(T, @truncate(std.meta.Int(.unsigned, @bitSizeOf(T)), raw)),
                 else => @compileError("Invalid type " ++ @typeName(T) ++ " passed"),
             },
-            .Bool => raw == 1,
+            .Bool => raw != 0,
             .Enum => @intToEnum(T, @intCast(i32, raw)),
             else => @compileError("Invalid type " ++ @typeName(T) ++ " passed"),
         },
@@ -815,11 +791,7 @@ fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type
 }
 
 /// this function receives a slice of a message and decodes one by one the elements of the packet list until the slice is exhausted
-fn decode_packed_list(slice: []const u8, comptime list_type: PackedListType, comptime T: type, array: *ArrayList(T), allocator: Allocator) UnionDecodingError!void {
-    _ = allocator;
-
-    if (slice.len == 0) return;
-
+fn decode_packed_list(slice: []const u8, comptime list_type: ListType, comptime T: type, array: *ArrayList(T)) UnionDecodingError!void {
     switch (list_type) {
         .FixedInt => {
             switch (T) {
@@ -844,20 +816,28 @@ fn decode_packed_list(slice: []const u8, comptime list_type: PackedListType, com
                 try array.append(value);
             }
         },
+        .SubMessage => return error.InvalidInput, // submessages are not suitable for packed lists yet
     }
 }
 
 fn set_value(comptime T: type, comptime child_type: type, comptime fieldName: []const u8, result: *T, comptime ftype: FieldType, extracted_data: Extracted, allocator: Allocator) !void {
     @field(result, fieldName) = switch (ftype) {
+        // TODO: test extracted_data=Slice
         .Varint => |varint_type| get_varint_value(child_type, varint_type, extracted_data.data.RawValue),
+        // TODO: test extracted_data=Slice
         .FixedInt => get_fixed_value(child_type, extracted_data.data.RawValue),
+        // TODO: test extracted_data=RawValue
         .SubMessage => try pb_decode(child_type, extracted_data.data.Slice, allocator),
+        // TODO: test extracted_data=RawValue
         .String => extracted_data.data.Slice,
         else => @compileError(@typeName(child_type)),
     };
 }
 
 fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime field: StructField, result: *T, extracted_data: Extracted, allocator: Allocator) !void {
+    const type_of_message = @intToEnum(TagNumber, extracted_data.tag & 0b111);
+    _ = type_of_message;
+
     switch (field_desc.ftype) {
         .Varint, .FixedInt, .SubMessage, .String => {
             switch (@typeInfo(field.type)) {
@@ -870,33 +850,44 @@ fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime 
                 },
             }
         },
-        .List => |list_type| {
+        .List, .PackedList => |list_type| {
             const child_type = @typeInfo(@TypeOf(@field(result, field.name).items)).Pointer.child;
-            switch (list_type) {
-                .Varint => |varint_type| {
-                    switch (extracted_data.data) {
-                        .RawValue => |value| try @field(result, field.name).append(get_varint_value(child_type, varint_type, value)),
-                        .Slice => @panic("Invalid data"),
-                    }
-                },
-                .FixedInt => |_| {
-                    switch (extracted_data.data) {
-                        .RawValue => |value| try @field(result, field.name).append(decode_fixed_raw(child_type, value)),
-                        .Slice => @panic("Invalid data"),
-                    }
-                },
-                .SubMessage, .String => switch (extracted_data.data) {
-                    .Slice => |slice| try decode_list(slice, list_type, child_type, &@field(result, field.name), allocator),
-                    .RawValue => @panic("Invalid data"),
-                },
+
+            if (field_desc.ftype == .PackedList) {
+                // TODO: test extracted_data=RawValue
+                try decode_packed_list(extracted_data.data.Slice, list_type, child_type, &@field(result, field.name));
+            } else {
+                switch (list_type) {
+                    .Varint => |varint_type| {
+                        switch (extracted_data.data) {
+                            .RawValue => |value| {
+                                try @field(result, field.name).append(get_varint_value(child_type, varint_type, value));
+                            },
+                            .Slice => |slice| {
+                                try decode_packed_list(slice, list_type, child_type, &@field(result, field.name));
+                            },
+                        }
+                    },
+                    .FixedInt => |_| {
+                        switch (extracted_data.data) {
+                            .RawValue => |value| {
+                                try @field(result, field.name).append(decode_fixed_raw(child_type, value));
+                            },
+                            .Slice => |slice| {
+                                try decode_packed_list(slice, list_type, child_type, &@field(result, field.name));
+                            },
+                        }
+                    },
+                    .SubMessage, .String => switch (extracted_data.data) {
+                        .Slice => |slice| try decode_list(slice, list_type, child_type, &@field(result, field.name), allocator),
+                        .RawValue => @panic("TODO: TEST Invalid data"),
+                    },
+                }
             }
-        },
-        .PackedList => |list_type| {
-            const child_type = @typeInfo(@TypeOf(@field(result, field.name).items)).Pointer.child;
-            try decode_packed_list(extracted_data.data.Slice, list_type, child_type, &@field(result, field.name), allocator);
         },
         .Map => |map_data| {
             const map_type = get_map_submessage_type(map_data);
+            // TODO: test extracted_data=RawValue
             var submessage_iterator = LengthDelimitedDecoderIterator{ .input = extracted_data.data.Slice };
             while (try submessage_iterator.next()) |slice| {
                 var value = map_type.decode(slice, allocator);
@@ -910,8 +901,8 @@ fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime 
 }
 
 inline fn is_tag_known(comptime field_desc: FieldDescriptor, tag_to_check: Extracted) bool {
-    if (field_desc.tag) |tag| {
-        return tag == tag_to_check.tag;
+    if (field_desc.field_number) |field_number| {
+        return field_number == tag_to_check.field_number;
     }
 
     return false;
@@ -1013,7 +1004,33 @@ test "unit varint packed - decode - multi-byte-varint" {
     var list = ArrayList(u32).init(testing.allocator);
     defer list.deinit();
 
-    try decode_packed_list(bytes, .{ .Varint = .Simple }, u32, &list, testing.allocator);
+    try decode_packed_list(bytes, .{ .Varint = .Simple }, u32, &list);
 
     try testing.expectEqualSlices(u32, &[_]u32{ 3, 270, 86942 }, list.items);
+}
+
+test "decode fixed" {
+    const u_32 = [_]u8{ 2, 0, 0, 0 };
+    const u_32_result: u32 = 2;
+    try testing.expectEqual(u_32_result, decode_fixed(u32, &u_32));
+
+    const u_64 = [_]u8{ 1, 0, 0, 0, 0, 0, 0, 0 };
+    const u_64_result: u64 = 1;
+    try testing.expectEqual(u_64_result, decode_fixed(u64, &u_64));
+
+    const i_32 = [_]u8{ 0xFF, 0xFF, 0xFF, 0xFF };
+    const i_32_result: i32 = -1;
+    try testing.expectEqual(i_32_result, decode_fixed(i32, &i_32));
+
+    const i_64 = [_]u8{ 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+    const i_64_result: i64 = -2;
+    try testing.expectEqual(i_64_result, decode_fixed(i64, &i_64));
+
+    const f_32 = [_]u8{ 0x00, 0x00, 0xa0, 0x40 };
+    const f_32_result: f32 = 5.0;
+    try testing.expectEqual(f_32_result, decode_fixed(f32, &f_32));
+
+    const f_64 = [_]u8{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x40 };
+    const f_64_result: f64 = 5.0;
+    try testing.expectEqual(f_64_result, decode_fixed(f64, &f_64));
 }
