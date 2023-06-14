@@ -30,6 +30,9 @@ pub const ListTypeTag = enum {
     SubMessage,
 };
 
+/// Enum describing the content type of a repeated field.
+pub const PackedListTypeTag = enum { Varint, FixedInt, String };
+
 /// Tagged union for repeated fields, giving the details of the underlying type.
 pub const ListType = union(ListTypeTag) {
     Varint: VarintType,
@@ -37,6 +40,9 @@ pub const ListType = union(ListTypeTag) {
     FixedInt: TagNumber,
     SubMessage,
 };
+
+/// Tagged union for repeated packed fields, giving the details of the underlying type.
+pub const PackedListType = union(PackedListTypeTag) { Varint: VarintType, FixedInt: TagNumber, String };
 
 /// Enum describing the details of keys or values for a map type.
 pub const KeyValueTypeTag = enum {
@@ -80,7 +86,7 @@ pub const FieldType = union(FieldTypeTag) {
     SubMessage,
     String,
     List: ListType,
-    PackedList: ListType,
+    PackedList: PackedListType,
     OneOf: type,
     Map: MapData,
 
@@ -248,20 +254,24 @@ fn append_const_bytes(pb: *ArrayList(u8), value: []const u8) !void {
 }
 
 /// simple appending of a list of fixed-size data.
-fn append_list_of_fixed(pb: *ArrayList(u8), value: anytype) !void {
-    const total_len = @divFloor(value.items.len * @bitSizeOf(@typeInfo(@TypeOf(value.items)).Pointer.child), 8);
-    try append_as_varint(pb, total_len, .Simple);
-    if (@TypeOf(value) == ArrayList(u8)) {
-        try pb.appendSlice(value.items);
-    } else {
-        for (value.items) |item| {
-            try append_fixed(pb, item);
-        }
+fn append_packed_list_of_fixed(pb: *ArrayList(u8), comptime field: FieldDescriptor, value: anytype) !void {
+    // first append the tag for the field descriptor
+    try append_tag(pb, field);
+
+    // then write elements
+    const len_index = pb.items.len;
+    for (value.items) |item| {
+        try append_fixed(pb, item);
     }
+
+    // and finally prepend the LEN size in the len_index position
+    const size_encoded = pb.items.len - len_index;
+    try insert_raw_varint(pb, size_encoded, len_index);
 }
 
 /// Appends a list of varint to the pb buffer.
-fn append_list_of_varint(pb: *ArrayList(u8), value_list: anytype, comptime varint_type: VarintType) !void {
+fn append_packed_list_of_varint(pb: *ArrayList(u8), value_list: anytype, comptime field: FieldDescriptor, comptime varint_type: VarintType) !void {
+    try append_tag(pb, field);
     const len_index = pb.items.len;
     for (value_list.items) |item| {
         try append_varint(pb, item, varint_type);
@@ -270,7 +280,7 @@ fn append_list_of_varint(pb: *ArrayList(u8), value_list: anytype, comptime varin
     try insert_raw_varint(pb, size_encoded, len_index);
 }
 
-/// Appends a list of submessages to the pb_buffer.
+/// Appends a list of submessages to the pb_buffer. Sequentially, prepending the tag of each message.
 fn append_list_of_submessages(pb: *ArrayList(u8), comptime field: FieldDescriptor, value_list: anytype) !void {
     for (value_list.items) |item| {
         try append_tag(pb, field);
@@ -278,12 +288,16 @@ fn append_list_of_submessages(pb: *ArrayList(u8), comptime field: FieldDescripto
     }
 }
 
-/// Appends a list of submessages to the pb_buffer.
-fn append_list_of_strings(pb: *ArrayList(u8), comptime field: FieldDescriptor, value_list: anytype) !void {
+/// Appends a packed list of string to the pb_buffer.
+fn append_packed_list_of_strings(pb: *ArrayList(u8), comptime field: FieldDescriptor, value_list: anytype) !void {
+    try append_tag(pb, field);
+
+    const len_index = pb.items.len;
     for (value_list.items) |item| {
-        try append_tag(pb, field);
         try append_const_bytes(pb, item);
     }
+    const size_encoded = pb.items.len - len_index;
+    try insert_raw_varint(pb, size_encoded, len_index);
 }
 
 /// Appends the full tag of the field in the pb buffer, if there is any.
@@ -366,14 +380,14 @@ fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, value: anytype) !
         .PackedList => |list_type| {
             switch (list_type) {
                 .FixedInt => {
-                    try append_tag(pb, field);
-                    try append_list_of_fixed(pb, value);
+                    try append_packed_list_of_fixed(pb, field, value);
                 },
                 .Varint => |varint_type| {
-                    try append_tag(pb, field);
-                    try append_list_of_varint(pb, value, varint_type);
+                    try append_packed_list_of_varint(pb, value, field, varint_type);
                 },
-                else => @panic(".PackedList only implemented for FixedInt and Varint"),
+                .String => |varint_type| {
+                    try append_packed_list_of_strings(pb, value, varint_type);
+                },
             }
         },
         .List => |list_type| {
@@ -385,10 +399,7 @@ fn append(pb: *ArrayList(u8), comptime field: FieldDescriptor, value: anytype) !
                     }
                 },
                 .SubMessage => {
-                    for (value.items) |item| {
-                        try append_tag(pb, field);
-                        try append_submessage(pb, item);
-                    }
+                    try append_list_of_submessages(pb, field, value);
                 },
                 .String => {
                     for (value.items) |item| {
@@ -504,12 +515,15 @@ fn deinit_field(field: anytype, comptime field_name: []const u8, comptime ftype:
         .SubMessage => {
             @field(field, field_name).?.deinit();
         },
-        .List, .PackedList => |list_type| {
+        .List => |list_type| {
             if (list_type == .SubMessage) {
                 for (@field(field, field_name).items) |item| {
                     item.deinit();
                 }
             }
+            @field(field, field_name).deinit();
+        },
+        .PackedList => |_| {
             @field(field, field_name).deinit();
         },
         .String => {
@@ -557,19 +571,24 @@ fn DecodedVarint(comptime T: type) type {
 }
 
 /// Decodes a varint from a slice, to type T.
-fn decode_varint(comptime T: type, input: []const u8) DecodedVarint(T) {
-    var value: T = 0;
+fn decode_varint(comptime T: type, input: []const u8) DecodingError!DecodedVarint(T) {
     var index: usize = 0;
+    const len: usize = input.len;
 
-    while ((input[index] & 0b10000000) != 0) : (index += 1) {
-        value += (@as(T, input[index] & 0x7F)) << (@intCast(std.math.Log2Int(T), index * 7));
+    var shift: u32 = 0;
+    var value: T = 0;
+    while (true) {
+        if (index >= len) return error.NotEnoughData;
+        const b = input[index];
+        value += (@as(T, input[index] & 0x7F)) << (@intCast(std.math.Log2Int(T), shift));
+        index += 1;
+        if (b >> 7 == 0) break;
+        shift += 7;
     }
-
-    value += (@as(T, input[index] & 0x7F)) << (@intCast(std.math.Log2Int(T), index * 7));
 
     return DecodedVarint(T){
         .value = value,
-        .size = index + 1,
+        .size = index,
     };
 }
 
@@ -651,9 +670,9 @@ fn VarintDecoderIterator(comptime T: type, comptime varint_type: VarintType) typ
         input: []const u8,
         current_index: usize = 0,
 
-        fn next(self: *Self) ?T {
+        fn next(self: *Self) !?T {
             if (self.current_index < self.input.len) {
-                const raw_value = decode_varint(u64, self.input[self.current_index..]);
+                const raw_value = try decode_varint(u64, self.input[self.current_index..]);
                 defer self.current_index += raw_value.size;
                 return get_varint_value(T, varint_type, raw_value.value);
             }
@@ -662,34 +681,22 @@ fn VarintDecoderIterator(comptime T: type, comptime varint_type: VarintType) typ
     };
 }
 
-test "VarintDecoderIterator" {
-    var demo = VarintDecoderIterator(u64, .Simple){ .input = "\x01\x02\x03\x04" };
-    try testing.expectEqual(demo.next(), 1);
-    try testing.expectEqual(demo.next(), 2);
-    try testing.expectEqual(demo.next(), 3);
-    try testing.expectEqual(demo.next(), 4);
-    try testing.expectEqual(demo.next(), null);
-}
+const LengthDelimitedDecoderIterator = struct {
+    const Self = @This();
 
-fn SubmessageDecoderIterator(comptime T: type) type {
-    return struct {
-        const Self = @This();
+    input: []const u8,
+    current_index: usize = 0,
 
-        input: []const u8,
-        current_index: usize = 0,
-        allocator: Allocator,
-
-        fn next(self: *Self) !?T {
-            if (self.current_index < self.input.len) {
-                const size = decode_varint(u64, self.input[self.current_index..]);
-                self.current_index += size.size;
-                defer self.current_index += size.value;
-                return try T.decode(self.input[self.current_index .. self.current_index + size.value], self.allocator);
-            }
-            return null;
+    fn next(self: *Self) !?[]const u8 {
+        if (self.current_index < self.input.len) {
+            const size = try decode_varint(u64, self.input[self.current_index..]);
+            self.current_index += size.size;
+            defer self.current_index += size.value;
+            return self.input[self.current_index .. self.current_index + size.value];
         }
-    };
-}
+        return null;
+    }
+};
 
 /// "Tokenizer" of a byte slice to raw pb data.
 pub const WireDecoderIterator = struct {
@@ -699,12 +706,12 @@ pub const WireDecoderIterator = struct {
     /// Attempts at decoding the next pb_buffer data.
     pub fn next(state: *WireDecoderIterator) DecodingError!?Extracted {
         if (state.current_index < state.input.len) {
-            const tag_and_wire = decode_varint(u32, state.input[state.current_index..]);
+            const tag_and_wire = try decode_varint(u32, state.input[state.current_index..]);
             state.current_index += tag_and_wire.size;
             const wire_type = tag_and_wire.value & 0b00000111;
             const data: ExtractedData = switch (wire_type) {
                 0 => blk: { // VARINT
-                    const varint = decode_varint(u64, state.input[state.current_index..]);
+                    const varint = try decode_varint(u64, state.input[state.current_index..]);
                     state.current_index += varint.size;
                     break :blk ExtractedData{
                         .RawValue = varint.value,
@@ -716,7 +723,7 @@ pub const WireDecoderIterator = struct {
                     break :blk value;
                 },
                 2 => blk: { // LEN PREFIXED MESSAGE
-                    const size = decode_varint(u32, state.input[state.current_index..]);
+                    const size = try decode_varint(u32, state.input[state.current_index..]);
                     const start = (state.current_index + size.size);
                     const end = start + size.value;
 
@@ -782,14 +789,14 @@ fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type
     switch (list_type) {
         .FixedInt => {
             switch (T) {
-                u8 => try array.appendSlice(input),
-                u16, i16, u32, i32, u64, i64, f32, f64 => {
+                u32, i32, u64, i64, f32, f64 => {
                     var fixed_iterator = FixedDecoderIterator(T){ .input = input };
                     while (fixed_iterator.next()) |value| {
                         try array.append(value);
                     }
+                    @panic("needs tests");
                 },
-                else => @compileError(@typeName(T)),
+                else => @compileError("Type not accepted for FixedInt: " ++ @typeName(T)),
             }
         },
         .Varint => |varint_type| {
@@ -807,35 +814,35 @@ fn decode_list(input: []const u8, comptime list_type: ListType, comptime T: type
     }
 }
 
-fn decode_packed_list(input: []const u8, comptime list_type: ListType, comptime T: type, array: *ArrayList(T), allocator: Allocator) Allocator.Error!void {
+/// this function receives a slice of a message and decodes one by one the elements of the packet list until the slice is exhausted
+fn decode_packed_list(slice: []const u8, comptime list_type: PackedListType, comptime T: type, array: *ArrayList(T), allocator: Allocator) UnionDecodingError!void {
     _ = allocator;
-    const length = decode_varint(u64, input);
-    const newSlice = input[length.size - 1 ..];
+
+    if (slice.len == 0) return;
 
     switch (list_type) {
         .FixedInt => {
             switch (T) {
-                u8 => try array.appendSlice(newSlice),
-                u16, i16, u32, i32, u64, i64, f32, f64 => {
-                    var fixed_iterator = FixedDecoderIterator(T){ .input = newSlice };
+                u32, i32, u64, i64, f32, f64 => {
+                    var fixed_iterator = FixedDecoderIterator(T){ .input = slice };
                     while (fixed_iterator.next()) |value| {
                         try array.append(value);
                     }
                 },
-                else => @compileError(@typeName(T)),
+                else => @compileError("Type not accepted for FixedInt: " ++ @typeName(T)),
             }
         },
         .Varint => |varint_type| {
-            var varint_iterator = VarintDecoderIterator(T, varint_type){ .input = newSlice };
-            while (varint_iterator.next()) |value| {
+            var varint_iterator = VarintDecoderIterator(T, varint_type){ .input = slice };
+            while (try varint_iterator.next()) |value| {
                 try array.append(value);
             }
         },
-        .SubMessage => {
-            @panic("packed submessages are not defined by protobuf");
-        },
         .String => {
-            @panic("packed strings are not defined by protobuf");
+            var varint_iterator = LengthDelimitedDecoderIterator{ .input = slice };
+            while (try varint_iterator.next()) |value| {
+                try array.append(value);
+            }
         },
     }
 }
@@ -890,8 +897,9 @@ fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime 
         },
         .Map => |map_data| {
             const map_type = get_map_submessage_type(map_data);
-            var submessage_iterator = SubmessageDecoderIterator(map_type){ .input = extracted_data.data.Slice, .allocator = allocator };
-            while (try submessage_iterator.next()) |value| {
+            var submessage_iterator = LengthDelimitedDecoderIterator{ .input = extracted_data.data.Slice };
+            while (try submessage_iterator.next()) |slice| {
+                var value = map_type.decode(slice, allocator);
                 try @field(result, field.name).put(value.key.?, value.value.?);
             }
         },
@@ -935,9 +943,77 @@ const testing = std.testing;
 
 test "get varint" {
     var pb = ArrayList(u8).init(testing.allocator);
-    const value: u32 = 300;
     defer pb.deinit();
-    try append_varint(&pb, value, .Simple);
+    try append_varint(&pb, @as(i32, 0x12c), .Simple);
+    try append_varint(&pb, @as(i32, 0x0), .Simple);
+    try append_varint(&pb, @as(i32, 0x1), .Simple);
+    try append_varint(&pb, @as(i32, 0xA1), .Simple);
+    try append_varint(&pb, @as(i32, 0xFF), .Simple);
 
-    try testing.expectEqualSlices(u8, &[_]u8{ 0b10101100, 0b00000010 }, pb.items);
+    try testing.expectEqualSlices(u8, &[_]u8{ 0b10101100, 0b00000010, 0x0, 0x1, 0xA1, 0x1, 0xFF, 0x01 }, pb.items);
+}
+
+test "append_raw_varint" {
+    var pb = ArrayList(u8).init(testing.allocator);
+    defer pb.deinit();
+
+    try append_raw_varint(&pb, 3);
+
+    try testing.expectEqualSlices(u8, &[_]u8{0x03}, pb.items);
+    try append_raw_varint(&pb, 1);
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x3, 0x1 }, pb.items);
+    try append_raw_varint(&pb, 0);
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x3, 0x1, 0x0 }, pb.items);
+    try append_raw_varint(&pb, 0x80);
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x3, 0x1, 0x0, 0x80, 0x1 }, pb.items);
+    try append_raw_varint(&pb, 0xffffffff);
+    try testing.expectEqualSlices(u8, &[_]u8{
+        0x3,
+        0x1,
+        0x0,
+        0x80,
+        0x1,
+        0xFF,
+        0xFF,
+        0xFF,
+        0xFF,
+        0x0F,
+    }, pb.items);
+}
+
+test "encode and decode multiple varints" {
+    var pb = ArrayList(u8).init(testing.allocator);
+    defer pb.deinit();
+    const list = &[_]u64{ 0, 1, 2, 3, 199, 0xff, 0xfa, 1231313, 999288361, 0, 0xfffffff, 0x80808080, 0xffffffff };
+
+    for (list) |num|
+        try append_varint(&pb, num, .Simple);
+
+    var demo = VarintDecoderIterator(u64, .Simple){ .input = pb.items };
+
+    for (list) |num|
+        try testing.expectEqual(num, (try demo.next()).?);
+
+    try testing.expectEqual(demo.next(), null);
+}
+
+test "VarintDecoderIterator" {
+    var demo = VarintDecoderIterator(u64, .Simple){ .input = "\x01\x02\x03\x04\xA1\x01" };
+    try testing.expectEqual(demo.next(), 1);
+    try testing.expectEqual(demo.next(), 2);
+    try testing.expectEqual(demo.next(), 3);
+    try testing.expectEqual(demo.next(), 4);
+    try testing.expectEqual(demo.next(), 0xA1);
+    try testing.expectEqual(demo.next(), null);
+}
+
+// length delimited message including a list of varints
+test "unit varint packed - decode - multi-byte-varint" {
+    const bytes = &[_]u8{ 0x03, 0x8e, 0x02, 0x9e, 0xa7, 0x05 };
+    var list = ArrayList(u32).init(testing.allocator);
+    defer list.deinit();
+
+    try decode_packed_list(bytes, .{ .Varint = .Simple }, u32, &list, testing.allocator);
+
+    try testing.expectEqualSlices(u32, &[_]u32{ 3, 270, 86942 }, list.items);
 }

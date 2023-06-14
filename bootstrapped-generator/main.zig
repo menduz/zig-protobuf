@@ -191,6 +191,14 @@ const GenerationContext = struct {
             return "@\"packed\"";
         } else if (std.mem.eql(u8, name, "type")) {
             return "@\"type\"";
+        } else if (std.mem.eql(u8, name, "var")) {
+            return "@\"var\"";
+        } else if (std.mem.eql(u8, name, "const")) {
+            return "@\"const\"";
+        } else if (std.mem.eql(u8, name, "pub")) {
+            return "@\"pub\"";
+        } else if (std.mem.eql(u8, name, "fn")) {
+            return "@\"fn\"";
         } else if (std.mem.eql(u8, name, "null")) {
             return "@\"null\"";
         } else if (std.mem.eql(u8, name, "error")) {
@@ -268,12 +276,26 @@ const GenerationContext = struct {
         }
     }
 
-    fn isPacked(_: *Self, field: descriptor.FieldDescriptorProto) bool {
+    fn isScalar(t: descriptor.FieldDescriptorProto.Type) bool {
+        return switch (t) {
+            .TYPE_DOUBLE, .TYPE_FLOAT, .TYPE_INT32, .TYPE_INT64, .TYPE_UINT32, .TYPE_UINT64, .TYPE_SINT32, .TYPE_SINT64, .TYPE_FIXED32, .TYPE_FIXED64, .TYPE_SFIXED32, .TYPE_SFIXED64, .TYPE_BOOL, .TYPE_STRING, .TYPE_BYTES => true,
+            else => false,
+        };
+    }
+
+    fn isPacked(_: *Self, file: descriptor.FileDescriptorProto, field: descriptor.FieldDescriptorProto) bool {
         if (field.options) |o| {
-            return o.@"packed" orelse false;
-        } else {
-            return false;
+            if (o.@"packed") |p| {
+                return p;
+            } else if (file.syntax != null and std.mem.eql(u8, file.syntax.?, "proto3")) {
+                if (field.type) |t| {
+                    return isScalar(t);
+                } else {
+                    return false;
+                }
+            }
         }
+        return false;
     }
 
     fn isOptional(_: *Self, field: descriptor.FieldDescriptorProto) bool {
@@ -324,13 +346,13 @@ const GenerationContext = struct {
         return try std.mem.concat(allocator, u8, &.{ prefix, infix, postfix });
     }
 
-    fn getFieldTypeDescriptor(ctx: *Self, _: FullName, _: descriptor.FileDescriptorProto, field: descriptor.FieldDescriptorProto) !string {
+    fn getFieldTypeDescriptor(ctx: *Self, _: FullName, file: descriptor.FileDescriptorProto, field: descriptor.FieldDescriptorProto) !string {
         var prefix: string = "";
 
         var postfix: string = "";
 
         if (ctx.isRepeated(field)) {
-            if (ctx.isPacked(field)) {
+            if (ctx.isPacked(file, field)) {
                 prefix = ".{ .PackedList = ";
             } else {
                 prefix = ".{ .List = ";

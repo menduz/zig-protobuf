@@ -11,6 +11,10 @@ const pb_encode = protobuf.pb_encode;
 const pb_deinit = protobuf.pb_deinit;
 const pb_init = protobuf.pb_init;
 const fd = protobuf.fd;
+/// import package protobuf_test_messages.proto3
+const protobuf_test_messages_proto3 = @import("protobuf_test_messages/proto3.pb.zig");
+/// import package jspb.test
+const jspb_test = @import("jspb/test.pb.zig");
 /// import package vector_tile
 const vector_tile = @import("vector_tile.pb.zig");
 
@@ -70,6 +74,27 @@ pub const Varints = struct {
         return pb_init(Varints, allocator);
     }
     pub fn deinit(self: Varints) void {
+        return pb_deinit(self);
+    }
+};
+
+pub const TestPacked = struct {
+    f: ArrayList(i32),
+
+    pub const _desc_table = .{
+        .f = fd(6, .{ .PackedList = .{ .Varint = .Simple } }),
+    };
+
+    pub fn encode(self: TestPacked, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
+    pub fn decode(input: []const u8, allocator: Allocator) !TestPacked {
+        return pb_decode(TestPacked, input, allocator);
+    }
+    pub fn init(allocator: Allocator) TestPacked {
+        return pb_init(TestPacked, allocator);
+    }
+    pub fn deinit(self: TestPacked) void {
         return pb_deinit(self);
     }
 };

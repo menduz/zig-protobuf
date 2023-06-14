@@ -3,6 +3,7 @@ const testing = std.testing;
 
 const protobuf = @import("protobuf");
 const tests = @import("./generated/tests.pb.zig");
+const proto3 = @import("./generated/protobuf_test_messages/proto3.pb.zig");
 const longName = @import("./generated/some/really/long/name/which/does/not/really/make/any/sense/but/sometimes/we/still/see/stuff/like/this.pb.zig");
 
 pub fn printAllDecoded(input: []const u8) !void {
@@ -24,7 +25,7 @@ test "long name" {
     defer testing.allocator.free(obtained);
 }
 
-test "packed int32_list" {
+test "packed int32_list encoding" {
     var demo = tests.Packed.init(testing.allocator);
     try demo.int32_list.append(0x01);
     try demo.int32_list.append(0x02);
@@ -35,7 +36,17 @@ test "packed int32_list" {
     const obtained = try demo.encode(testing.allocator);
     defer testing.allocator.free(obtained);
 
-    try testing.expectEqualSlices(u8, &[_]u8{ 0x0A, 0x04, 0x01, 0x02, 0x03, 0x04 }, obtained);
+    try testing.expectEqualSlices(u8, &[_]u8{
+        // fieldNumber=1<<3 packetType=2 (LEN)
+        (1 << 3) + 2,
+        // 4 bytes
+        0x04,
+        // payload
+        0x01,
+        0x02,
+        0x03,
+        0x04,
+    }, obtained);
 
     const decoded = try tests.Packed.decode(obtained, testing.allocator);
     defer decoded.deinit();
@@ -62,4 +73,36 @@ test "unpacked int32_list" {
     try testing.expectEqualSlices(i32, demo.int32_list.items, decoded.int32_list.items);
 
     // TODO: cross test against Packed type
+}
+
+// test "Required.Proto3.ProtobufInput.ValidDataRepeated.BOOL.PackedInput.ProtobufOutput" {
+//     const bytes = "\xda\x02\x28\x00\x01\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01\xce\xc2\xf1\x05\x80\x80\x80\x80\x20\xff\xff\xff\xff\xff\xff\xff\xff\x7f\x80\x80\x80\x80\x80\x80\x80\x80\x80\x01";
+//     const m = try proto3.TestAllTypesProto3.decode(bytes, testing.allocator);
+//     defer m.deinit();
+//     // try testing.expectEqualSlices(i32, demo.int32_list.items, decoded.int32_list.items);
+
+//     try testing.expectEqual(@as(usize, 7), m.repeated_bool.items.len);
+//     try testing.expectEqual(false, m.repeated_bool.items[0]);
+//     try testing.expectEqual(false, m.repeated_bool.items[1]);
+//     try testing.expectEqual(false, m.repeated_bool.items[2]);
+//     try testing.expectEqual(false, m.repeated_bool.items[3]);
+//     try testing.expectEqual(true, m.repeated_bool.items[4]);
+//     try testing.expectEqual(false, m.repeated_bool.items[5]);
+//     try testing.expectEqual(false, m.repeated_bool.items[6]);
+
+//     // TODO: cross test against Packed type
+// }
+
+test "packed example from protobuf documentation" {
+    const bytes = "\x32\x06\x03\x8e\x02\x9e\xa7\x05";
+    const m = try tests.TestPacked.decode(bytes, testing.allocator);
+    defer m.deinit();
+    try testing.expectEqualSlices(i32, &[_]i32{ 3, 270, 86942 }, m.f.items);
+}
+
+test "packed example from protobuf documentation repeated" {
+    const bytes = "\x32\x06\x03\x8e\x02\x9e\xa7\x05\x32\x06\x03\x8e\x02\x9e\xa7\x05";
+    const m = try tests.TestPacked.decode(bytes, testing.allocator);
+    defer m.deinit();
+    try testing.expectEqualSlices(i32, &[_]i32{ 3, 270, 86942, 3, 270, 86942 }, m.f.items);
 }

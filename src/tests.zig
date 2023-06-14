@@ -256,31 +256,120 @@ test "FixedInt - not packed" {
         0x08, 0x01,
     }, obtained);
 
-    try printAllDecoded(obtained);
+    // try printAllDecoded(obtained);
 
     const decoded = try WithBytes.decode(obtained, testing.allocator);
     defer decoded.deinit();
     try testing.expectEqualSlices(u32, demo.list_of_data.items, decoded.list_of_data.items);
 }
 
-// test "bytes - packed" {
-//     var demo = WithBytes.init(testing.allocator);
-//     try demo.list_of_data.append(0x08);
-//     try demo.list_of_data.append(0x01);
-//     defer demo.deinit();
+const WithBytesPacked = struct {
+    list_of_data: ArrayList(u32),
 
-//     const obtained = try demo.encode(testing.allocator);
-//     defer testing.allocator.free(obtained);
+    pub const _desc_table = .{
+        .list_of_data = fd(1, .{ .PackedList = .{ .Varint = .Simple } }),
+    };
 
-//     try testing.expectEqualSlices(u8, &[_]u8{
-//         0x08 + 2, 0x02,
-//         0x08,     0x01,
-//     }, obtained);
+    pub fn encode(self: WithBytesPacked, allocator: Allocator) ![]u8 {
+        return pb_encode(self, allocator);
+    }
 
-//     const decoded = try WithBytes.decode(obtained, testing.allocator);
-//     defer decoded.deinit();
-//     try testing.expectEqualSlices(u8, demo.list_of_data.items, decoded.list_of_data.items);
-// }
+    pub fn deinit(self: WithBytesPacked) void {
+        pb_deinit(self);
+    }
+
+    pub fn init(allocator: Allocator) WithBytesPacked {
+        return pb_init(WithBytesPacked, allocator);
+    }
+
+    pub fn decode(input: []const u8, allocator: Allocator) !WithBytesPacked {
+        return pb_decode(WithBytesPacked, input, allocator);
+    }
+};
+
+test "varint packed - decode empty" {
+    const decoded = try WithBytesPacked.decode("\x0A\x00", testing.allocator);
+    defer decoded.deinit();
+    try testing.expectEqualSlices(u32, &[_]u32{}, decoded.list_of_data.items);
+}
+
+test "varint packed - decode" {
+    const decoded = try WithBytesPacked.decode("\x0A\x02\x31\x32", testing.allocator);
+    defer decoded.deinit();
+    try testing.expectEqualSlices(u32, &[_]u32{ 0x31, 0x32 }, decoded.list_of_data.items);
+}
+
+test "varint packed - encode, single element multi-byte-varint" {
+    var demo = WithBytesPacked.init(testing.allocator);
+    try demo.list_of_data.append(0xA3);
+    defer demo.deinit();
+
+    const obtained = try demo.encode(testing.allocator);
+    defer testing.allocator.free(obtained);
+
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x0A, 0x02, 0xA3, 0x01 }, obtained);
+}
+
+test "varint packed - decode, single element multi-byte-varint" {
+    const obtained = &[_]u8{ 0x0A, 0x02, 0xA3, 0x01 };
+
+    const decoded = try WithBytesPacked.decode(obtained, testing.allocator);
+    defer decoded.deinit();
+    try testing.expectEqualSlices(u32, &[_]u32{0xA3}, decoded.list_of_data.items);
+}
+
+test "varint packed - encode decode, single element single-byte-varint" {
+    var demo = WithBytesPacked.init(testing.allocator);
+    try demo.list_of_data.append(0x13);
+    defer demo.deinit();
+
+    const obtained = try demo.encode(testing.allocator);
+    defer testing.allocator.free(obtained);
+
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x0A, 0x01, 0x13 }, obtained);
+
+    const decoded = try WithBytesPacked.decode(obtained, testing.allocator);
+    defer decoded.deinit();
+    try testing.expectEqualSlices(u32, demo.list_of_data.items, decoded.list_of_data.items);
+}
+
+test "varint packed - encode decode - single-byte-varint" {
+    var demo = WithBytesPacked.init(testing.allocator);
+    try demo.list_of_data.append(0x11);
+    try demo.list_of_data.append(0x12);
+    defer demo.deinit();
+
+    const obtained = try demo.encode(testing.allocator);
+    defer testing.allocator.free(obtained);
+
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x0A, 0x02, 0x11, 0x12 }, obtained);
+
+    const decoded = try WithBytesPacked.decode(obtained, testing.allocator);
+    defer decoded.deinit();
+    try testing.expectEqualSlices(u32, demo.list_of_data.items, decoded.list_of_data.items);
+}
+
+test "varint packed - encode - multi-byte-varint" {
+    var demo = WithBytesPacked.init(testing.allocator);
+    try demo.list_of_data.append(0xA1);
+    try demo.list_of_data.append(0xA2);
+    defer demo.deinit();
+
+    const obtained = try demo.encode(testing.allocator);
+    defer testing.allocator.free(obtained);
+
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x0A, 0x04, 0xA1, 0x01, 0xA2, 0x01 }, obtained);
+}
+
+test "integration varint packed - decode - multi-byte-varint" {
+    const obtained = &[_]u8{ 0x0A, 0x04, 0xA1, 0x01, 0xA2, 0x01 };
+
+    try testing.expectEqualSlices(u8, &[_]u8{ 0x0A, 0x04, 0xA1, 0x01, 0xA2, 0x01 }, obtained);
+
+    const decoded = try WithBytesPacked.decode(obtained, testing.allocator);
+    defer decoded.deinit();
+    try testing.expectEqualSlices(u32, &[_]u32{ 0xA1, 0xA2 }, decoded.list_of_data.items);
+}
 
 const FixedSizesList = struct {
     fixed32List: ArrayList(u32),
