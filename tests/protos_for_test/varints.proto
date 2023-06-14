@@ -12,3 +12,8 @@ message Varints {
 message TestPacked {
   repeated int32 f = 6 [packed=true];
 }
+
+message TestOptional {
+  optional string d = 4;
+  repeated int32 e = 5;
+}

@@ -164,28 +164,24 @@ fn insert_raw_varint(pb: *ArrayList(u8), size: u64, start_index: usize) !void {
 /// Mostly does the required transformations to use append_raw_varint
 /// after making the value some kind of unsigned value.
 fn append_as_varint(pb: *ArrayList(u8), int: anytype, comptime varint_type: VarintType) !void {
-    if (int < 0x7F and int >= 0) {
-        try pb.append(@intCast(u8, int));
-    } else {
-        const type_of_val = @TypeOf(int);
-        const bitsize = @bitSizeOf(type_of_val);
-        const val: ?u64 = blk: {
-            if (isSignedInt(type_of_val)) {
-                switch (varint_type) {
-                    .ZigZagOptimized => {
-                        break :blk @intCast(u64, (int >> (bitsize - 1)) ^ (int << 1));
-                    },
-                    .Simple => {
-                        break :blk @bitCast(std.meta.Int(.unsigned, bitsize), int);
-                    },
-                }
-            } else {
-                break :blk null;
+    const type_of_val = @TypeOf(int);
+    const bitsize = @bitSizeOf(type_of_val);
+    const val: u64 = blk: {
+        if (isSignedInt(type_of_val)) {
+            switch (varint_type) {
+                .ZigZagOptimized => {
+                    break :blk @intCast(u64, (int >> (bitsize - 1)) ^ (int << 1));
+                },
+                .Simple => {
+                    break :blk @bitCast(std.meta.Int(.unsigned, bitsize), int);
+                },
             }
-        };
+        } else {
+            break :blk @intCast(u64, int);
+        }
+    };
 
-        try append_raw_varint(pb, val orelse @intCast(u64, int));
-    }
+    try append_raw_varint(pb, val);
 }
 
 /// Append a value of any complex type that can be transfered as a varint
@@ -720,7 +716,7 @@ pub const WireDecoderIterator = struct {
                     break :blk value;
                 },
                 else => {
-                    @panic("unreachable");
+                    return error.InvalidInput;
                 },
             };
 
@@ -735,13 +731,13 @@ pub const WireDecoderIterator = struct {
 fn get_varint_value(comptime T: type, comptime varint_type: VarintType, raw: u64) T {
     return switch (varint_type) {
         .ZigZagOptimized => switch (@typeInfo(T)) {
-            .Int => @intCast(T, (@intCast(i64, raw) >> 1) ^ (-(@intCast(i64, raw) & 1))),
+            .Int => @intCast(T, (@intCast(T, raw) >> 1) ^ (-(@intCast(T, raw) & 1))),
             .Enum => @intToEnum(T, @intCast(i32, (@intCast(i64, raw) >> 1) ^ (-(@intCast(i64, raw) & 1)))),
             else => @compileError("Invalid type passed"),
         },
         .Simple => switch (@typeInfo(T)) {
             .Int => switch (T) {
-                u8, u32, u64 => @intCast(T, raw),
+                u8, u16, u32, u64 => @intCast(T, raw),
                 i32, i64 => @bitCast(T, @truncate(std.meta.Int(.unsigned, @bitSizeOf(T)), raw)),
                 else => @compileError("Invalid type " ++ @typeName(T) ++ " passed"),
             },
@@ -820,24 +816,21 @@ fn decode_packed_list(slice: []const u8, comptime list_type: ListType, comptime 
     }
 }
 
-fn set_value(comptime T: type, comptime child_type: type, comptime fieldName: []const u8, result: *T, comptime ftype: FieldType, extracted_data: Extracted, allocator: Allocator) !void {
+fn set_value(comptime T: type, comptime int_type: type, comptime fieldName: []const u8, result: *T, comptime ftype: FieldType, extracted_data: Extracted, allocator: Allocator) !void {
     @field(result, fieldName) = switch (ftype) {
         // TODO: test extracted_data=Slice
-        .Varint => |varint_type| get_varint_value(child_type, varint_type, extracted_data.data.RawValue),
+        .Varint => |varint_type| get_varint_value(int_type, varint_type, extracted_data.data.RawValue),
         // TODO: test extracted_data=Slice
-        .FixedInt => get_fixed_value(child_type, extracted_data.data.RawValue),
+        .FixedInt => get_fixed_value(int_type, extracted_data.data.RawValue),
         // TODO: test extracted_data=RawValue
-        .SubMessage => try pb_decode(child_type, extracted_data.data.Slice, allocator),
+        .SubMessage => try pb_decode(int_type, extracted_data.data.Slice, allocator),
         // TODO: test extracted_data=RawValue
         .String => extracted_data.data.Slice,
-        else => @compileError(@typeName(child_type)),
+        else => @compileError(@typeName(int_type)),
     };
 }
 
 fn decode_data(comptime T: type, comptime field_desc: FieldDescriptor, comptime field: StructField, result: *T, extracted_data: Extracted, allocator: Allocator) !void {
-    const type_of_message = @intToEnum(TagNumber, extracted_data.tag & 0b111);
-    _ = type_of_message;
-
     switch (field_desc.ftype) {
         .Varint, .FixedInt, .SubMessage, .String => {
             switch (@typeInfo(field.type)) {
@@ -1033,4 +1026,36 @@ test "decode fixed" {
     const f_64 = [_]u8{ 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x40 };
     const f_64_result: f64 = 5.0;
     try testing.expectEqual(f_64_result, decode_fixed(f64, &f_64));
+}
+
+test "zigzag i32 - encode" {
+    var pb = ArrayList(u8).init(testing.allocator);
+    defer pb.deinit();
+
+    const input = "\xE7\x07";
+
+    // -500 (.ZigZag)  encodes to {0xE7,0x07} which equals to 999 (.Simple)
+
+    try append_as_varint(&pb, @as(i32, -500), .ZigZagOptimized);
+    try testing.expectEqualSlices(u8, input, pb.items);
+}
+
+test "zigzag i32/i64 - decode" {
+    try testing.expectEqual(@as(i32, 1), get_varint_value(i32, .ZigZagOptimized, 2));
+    try testing.expectEqual(@as(i32, -2), get_varint_value(i32, .ZigZagOptimized, 3));
+    try testing.expectEqual(@as(i32, -500), get_varint_value(i32, .ZigZagOptimized, 999));
+    try testing.expectEqual(@as(i64, -500), get_varint_value(i64, .ZigZagOptimized, 999));
+    try testing.expectEqual(@as(i64, -0x80000000), get_varint_value(i64, .ZigZagOptimized, 0xffffffff));
+}
+
+test "zigzag i64 - encode" {
+    var pb = ArrayList(u8).init(testing.allocator);
+    defer pb.deinit();
+
+    const input = "\xE7\x07";
+
+    // -500 (.ZigZag)  encodes to {0xE7,0x07} which equals to 999 (.Simple)
+
+    try append_as_varint(&pb, @as(i64, -500), .ZigZagOptimized);
+    try testing.expectEqualSlices(u8, input, pb.items);
 }

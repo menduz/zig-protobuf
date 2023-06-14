@@ -25,3 +25,22 @@ test "FixedSizes" {
     defer decoded.deinit();
     try testing.expectEqual(demo, decoded);
 }
+
+test "FixedSizes - encode/decode" {
+    var demo = FixedSizes.init(testing.allocator);
+    defer demo.deinit();
+    demo.sfixed64 = -1123123141;
+    demo.sfixed32 = -2131312;
+    demo.fixed32 = 1;
+    demo.fixed64 = 2;
+    demo.double = 5.0;
+    demo.float = 5.0;
+
+    const obtained = try demo.encode(testing.allocator);
+    defer testing.allocator.free(obtained);
+
+    // decoding
+    const decoded = try FixedSizes.decode(obtained, testing.allocator);
+    defer decoded.deinit();
+    try testing.expectEqualDeep(demo, decoded);
+}

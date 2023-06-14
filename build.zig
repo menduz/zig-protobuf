@@ -73,6 +73,12 @@ pub fn build(b: *std.build.Builder) void {
             .optimize = optimize,
         }),
         b.addTest(.{
+            .name = "unittest",
+            .root_source_file = .{ .path = "tests/unittest.zig" },
+            .target = target,
+            .optimize = optimize,
+        }),
+        b.addTest(.{
             .name = "fixedsizes",
             .root_source_file = .{ .path = "tests/tests_fixedsizes.zig" },
             .target = target,

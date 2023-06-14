@@ -186,29 +186,11 @@ const GenerationContext = struct {
         }
     }
 
-    fn fieldName(_: *Self, name: string) string {
-        if (std.mem.eql(u8, name, "packed")) {
-            return "@\"packed\"";
-        } else if (std.mem.eql(u8, name, "type")) {
-            return "@\"type\"";
-        } else if (std.mem.eql(u8, name, "var")) {
-            return "@\"var\"";
-        } else if (std.mem.eql(u8, name, "const")) {
-            return "@\"const\"";
-        } else if (std.mem.eql(u8, name, "pub")) {
-            return "@\"pub\"";
-        } else if (std.mem.eql(u8, name, "fn")) {
-            return "@\"fn\"";
-        } else if (std.mem.eql(u8, name, "null")) {
-            return "@\"null\"";
-        } else if (std.mem.eql(u8, name, "error")) {
-            return "@\"error\"";
-        }
-        return name;
-    }
-
-    fn getFieldName(ctx: *Self, field: descriptor.FieldDescriptorProto) !string {
-        return ctx.fieldName(field.name.?);
+    fn getFieldName(_: *Self, field: descriptor.FieldDescriptorProto) !string {
+        if (std.zig.Token.keywords.get(field.name.?) != null)
+            return try std.fmt.allocPrint(allocator, "@\"{?s}\"", .{field.name})
+        else
+            return field.name.?;
     }
 
     fn fieldTypeFqn(ctx: *Self, parentFqn: FullName, file: descriptor.FileDescriptorProto, field: descriptor.FieldDescriptorProto) !string {
